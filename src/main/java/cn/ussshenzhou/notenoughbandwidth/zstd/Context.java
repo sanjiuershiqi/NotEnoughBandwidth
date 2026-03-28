@@ -5,12 +5,7 @@ import com.github.luben.zstd.EndDirective;
 import com.github.luben.zstd.Zstd;
 import com.github.luben.zstd.ZstdCompressCtx;
 import com.github.luben.zstd.ZstdDecompressCtx;
-import com.sun.management.HotSpotDiagnosticMXBean;
-import sun.misc.Unsafe;
-
 import java.io.Closeable;
-import java.lang.management.ManagementFactory;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 
 /**

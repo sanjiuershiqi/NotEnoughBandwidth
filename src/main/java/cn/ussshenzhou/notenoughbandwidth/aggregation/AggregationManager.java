@@ -8,8 +8,6 @@ import io.netty.channel.DefaultChannelPipeline;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
-import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
-import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -19,7 +17,7 @@ import java.util.concurrent.*;
  * @author USS_Shenzhou
  */
 public class AggregationManager {
-    private static final WeakHashMap<Connection, ArrayList<AggregatedEncodePacket>> PACKET_BUFFER = new WeakHashMap<>();
+    private static final WeakHashMap<Connection, ArrayList<Packet<?>>> PACKET_BUFFER = new WeakHashMap<>();
     private static final ScheduledExecutorService TIMER = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setNameFormat("NEB-Flush-thread").setDaemon(true).build());
     private static final ArrayList<ScheduledFuture<?>> TASKS = new ArrayList<>();
     private static volatile boolean initialized = false;
@@ -37,8 +35,7 @@ public class AggregationManager {
     }
 
     public synchronized static void takeOver(Packet<?> packet, Connection connection) {
-        var type = PacketUtil.getTrueType(packet);
-        PACKET_BUFFER.computeIfAbsent(connection, _ -> new ArrayList<>()).add(new AggregatedEncodePacket(packet, type));
+        PACKET_BUFFER.computeIfAbsent(connection, _ -> new ArrayList<>()).add(packet);
     }
 
     private synchronized static void flush() {
@@ -53,7 +50,7 @@ public class AggregationManager {
         });
     }
 
-    private synchronized static void flushInternal(Connection connection, @Nullable ArrayList<AggregatedEncodePacket> packets) {
+    private synchronized static void flushInternal(Connection connection, @Nullable ArrayList<Packet<?>> packets) {
         try {
             if (packets == null || packets.isEmpty()) {
                 return;
@@ -64,10 +61,7 @@ public class AggregationManager {
                 return;
             }
             var sendPackets = new ArrayList<>(packets);
-            connection.send(connection.getSending() == PacketFlow.CLIENTBOUND
-                    ? new ClientboundCustomPayloadPacket(new PacketAggregationPacket(sendPackets, encoder.getProtocolInfo(), connection))
-                    : new ServerboundCustomPayloadPacket(new PacketAggregationPacket(sendPackets, encoder.getProtocolInfo(), connection))
-            );
+            
             packets.clear();
             connection.flushChannel();
         } catch (Exception e) {

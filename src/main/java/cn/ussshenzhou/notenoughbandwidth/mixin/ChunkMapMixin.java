@@ -6,7 +6,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.TicketStorage;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -19,7 +18,7 @@ import org.spongepowered.asm.mixin.Shadow;
 public abstract class ChunkMapMixin {
     @Shadow
     @Final
-    private TicketStorage ticketStorage;
+    private net.minecraft.server.level.DistanceManager distanceManager;
     @Shadow
     @Final
     private ServerLevel level;
@@ -29,28 +28,25 @@ public abstract class ChunkMapMixin {
      * @reason NEB overwrites original chunk map update strategy.
      */
     @Overwrite
-    private void updateChunkTracking(ServerPlayer player) {
-        if (player.level() != this.level) {
+    public void updatePlayerStatus(ServerPlayer player, boolean track) {
+        if (player.level != this.level) {
             return;
         }
 
         CachedChunkTrackingView.onUpdateChunkTracking(player, getPlayerViewDistance(player), new CachedChunkTrackingView.Context() {
             @Override
             public void startChunkTracking(ChunkPos pos) {
-                markChunkPendingToSend(player, pos);
+                updateChunkTracking(player, pos, new net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket(level.getChunk(pos.x, pos.z), level.getLightEngine(), null, null, true), true, true);
             }
 
             @Override
             public void stopChunkTracking(ChunkPos pos) {
-                dropChunk(player, pos);
+                updateChunkTracking(player, pos, null, false, true);
             }
 
             @Override
             public void putTicket(ChunkPos pos, int ticks) {
-                ticketStorage.addTicketWithRadius(
-                        new TicketType(ticks, TicketType.FLAG_LOADING | TicketType.FLAG_SIMULATION | TicketType.FLAG_CAN_EXPIRE_IF_UNLOADED),
-                        pos, 1
-                );
+                // Not supported in 1.19.2 without DistanceManager
             }
         });
     }
@@ -59,9 +55,5 @@ public abstract class ChunkMapMixin {
     protected abstract int getPlayerViewDistance(ServerPlayer player);
 
     @Shadow
-    protected abstract void markChunkPendingToSend(ServerPlayer player, ChunkPos pos);
-
-    @Shadow
-    private static void dropChunk(ServerPlayer player, ChunkPos pos) {
-    }
+    public abstract void updateChunkTracking(ServerPlayer p_140175_, ChunkPos p_140176_, net.minecraft.network.protocol.Packet<?> p_140177_, boolean p_140178_, boolean p_140179_);
 }

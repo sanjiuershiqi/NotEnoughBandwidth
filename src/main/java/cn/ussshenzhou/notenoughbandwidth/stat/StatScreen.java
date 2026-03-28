@@ -1,10 +1,8 @@
 package cn.ussshenzhou.notenoughbandwidth.stat;
 
-import cn.ussshenzhou.network.StatQuery;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
 import static cn.ussshenzhou.notenoughbandwidth.stat.SimpleStatManager.*;
 
@@ -27,14 +25,14 @@ public class StatScreen extends Screen {
     private int tick = 0;
 
     public StatScreen() {
-        super(Component.empty());
+        super(Component.literal("Stat Screen"));
     }
 
     @Override
     public void tick() {
         super.tick();
         if (tick % 10 == 0) {
-            ClientPacketDistributor.sendToServer(new StatQuery());
+            // ClientPacketDistributor.sendToServer(new StatQuery());
             actualC = "↓ Inbound  "
                     + getReadableSpeed((int) LOCAL.inboundSpeedBaked().averageIn1s())
                     + "  Total  "
@@ -84,24 +82,24 @@ public class StatScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-        super.extractRenderState(graphics, mouseX, mouseY, a);
-        graphics.fill(0,0,width,height,0x80000000);
-        var textRenderer = graphics.textRenderer();
-        var pose = graphics.pose();
-        textRenderer.accept(10, 10, Component.literal(client));
-        textRenderer.accept(10, 30, Component.literal(actual));
-        textRenderer.accept(10, 40, Component.literal(actualC));
-        textRenderer.accept(10, 60, Component.literal(raw));
-        textRenderer.accept(10, 70, Component.literal(rawC));
-        textRenderer.accept(10, 90, Component.literal(ratioC));
+    public void render(PoseStack poseStack, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(poseStack);
+        super.render(poseStack, mouseX, mouseY, partialTick);
+        
+        fill(poseStack, 0,0,width,height,0x80000000);
+        this.font.draw(poseStack, client, 10, 10, 0xFFFFFF);
+        this.font.draw(poseStack, actual, 10, 30, 0xFFFFFF);
+        this.font.draw(poseStack, actualC, 10, 40, 0xFFFFFF);
+        this.font.draw(poseStack, raw, 10, 60, 0xFFFFFF);
+        this.font.draw(poseStack, rawC, 10, 70, 0xFFFFFF);
+        this.font.draw(poseStack, ratioC, 10, 90, 0xFFFFFF);
 
-        textRenderer.accept(10, 120, Component.literal(server));
-        textRenderer.accept(10, 140, Component.literal(actual));
-        textRenderer.accept(10, 150, Component.literal(actualS));
-        textRenderer.accept(10, 170, Component.literal(raw));
-        textRenderer.accept(10, 180, Component.literal(rawS));
-        textRenderer.accept(10, 200, Component.literal(ratioS));
+        this.font.draw(poseStack, server, 10, 120, 0xFFFFFF);
+        this.font.draw(poseStack, actual, 10, 140, 0xFFFFFF);
+        this.font.draw(poseStack, actualS, 10, 150, 0xFFFFFF);
+        this.font.draw(poseStack, raw, 10, 170, 0xFFFFFF);
+        this.font.draw(poseStack, rawS, 10, 180, 0xFFFFFF);
+        this.font.draw(poseStack, ratioS, 10, 200, 0xFFFFFF);
     }
 
     private String getReadableSpeed(int bytes) {
