@@ -37,7 +37,7 @@ public abstract class ConnectionMixin {
     @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;)V", at = @At("HEAD"), cancellable = true)
     private void nebwPacketAggregate(Packet<?> packet, @Nullable ChannelFutureListener listener, CallbackInfo ci) {
         //only work on play
-        if (this.getRemoteAddress() instanceof LocalAddress || this.packetListener == null || this.packetListener.protocol() != ConnectionProtocol.PLAY) {
+        if (this.getRemoteAddress() instanceof LocalAddress || this.packetListener == null) {
             return;
         }
         //compatability and avoid infinite loop

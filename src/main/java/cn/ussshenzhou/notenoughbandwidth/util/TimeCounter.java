@@ -1,36 +1,23 @@
 package cn.ussshenzhou.notenoughbandwidth.util;
 
-import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
-import net.minecraft.util.Util;
-
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
  * @author USS_Shenzhou
  */
 public class TimeCounter {
-    private final Long2IntOpenHashMap container = new Long2IntOpenHashMap();
-    private final int windowsSizeMs;
-
-    public TimeCounter(int windowsSizeMs) {
-        this.windowsSizeMs = windowsSizeMs;
-    }
+    private final ConcurrentSkipListMap<Long, Integer> container = new ConcurrentSkipListMap<>();
 
     public TimeCounter() {
-        this(2000);
     }
 
-    private synchronized void update() {
-        long now = Util.getMillis();
-        container.keySet().removeIf(then -> now - then > windowsSizeMs);
+    public double averageIn1s() {
+        long now = System.currentTimeMillis();
+        container.headMap(now - 1000).clear();
+        return container.values().stream().mapToInt(Integer::intValue).average().orElse(0);
     }
 
-    public synchronized void put(int value) {
-        update();
-        container.put(Util.getMillis(), value);
-    }
-
-    public synchronized double averageIn1s() {
-        return container.values().intStream().sum() / (double) windowsSizeMs * 1000;
+    public void put(int value) {
+        container.put(System.currentTimeMillis(), value);
     }
 }

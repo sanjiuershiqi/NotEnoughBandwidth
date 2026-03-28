@@ -63,7 +63,7 @@ public class AggregationManager {
             var sendPackets = new ArrayList<>(packets);
             
             packets.clear();
-            connection.flushChannel();
+            connection.channel().flush();
         } catch (Exception e) {
             LogUtils.getLogger().error("Skipped: Failed to flush packets.", e);
         }
