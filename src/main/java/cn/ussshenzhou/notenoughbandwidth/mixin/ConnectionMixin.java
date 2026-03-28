@@ -3,7 +3,7 @@ package cn.ussshenzhou.notenoughbandwidth.mixin;
 import cn.ussshenzhou.notenoughbandwidth.NotEnoughBandwidthConfig;
 import cn.ussshenzhou.notenoughbandwidth.aggregation.AggregationManager;
 import cn.ussshenzhou.notenoughbandwidth.util.PacketUtil;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.channel.local.LocalAddress;
 import net.minecraft.network.Connection;
 import net.minecraft.network.ConnectionProtocol;
@@ -29,13 +29,13 @@ public abstract class ConnectionMixin {
     private volatile PacketListener packetListener;
 
     @Shadow
-    public abstract void send(Packet<?> packet, @Nullable ChannelFutureListener listener);
+    public abstract void send(Packet<?> packet, @Nullable io.netty.util.concurrent.GenericFutureListener<? extends io.netty.util.concurrent.Future<? super Void>> listener);
 
     @Shadow
     public abstract SocketAddress getRemoteAddress();
 
-    @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;)V", at = @At("HEAD"), cancellable = true)
-    private void nebwPacketAggregate(Packet<?> packet, @Nullable ChannelFutureListener listener, CallbackInfo ci) {
+    @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/util/concurrent/GenericFutureListener;)V", at = @At("HEAD"), cancellable = true)
+    private void nebwPacketAggregate(Packet<?> packet, @Nullable io.netty.util.concurrent.GenericFutureListener<? extends io.netty.util.concurrent.Future<? super Void>> listener, CallbackInfo ci) {
         //only work on play
         if (this.getRemoteAddress() instanceof LocalAddress || this.packetListener == null) {
             return;

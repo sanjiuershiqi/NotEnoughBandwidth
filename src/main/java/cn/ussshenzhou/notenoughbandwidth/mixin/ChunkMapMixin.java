@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.Shadow;
 public abstract class ChunkMapMixin {
     @Shadow
     @Final
-    private net.minecraft.server.level.DistanceManager distanceManager;
+    private net.minecraft.world.level.ChunkPos.Tracker chunkTracker;
     @Shadow
     @Final
     private ServerLevel level;
@@ -36,12 +36,12 @@ public abstract class ChunkMapMixin {
         CachedChunkTrackingView.onUpdateChunkTracking(player, getPlayerViewDistance(player), new CachedChunkTrackingView.Context() {
             @Override
             public void startChunkTracking(ChunkPos pos) {
-                updateChunkTracking(player, pos, new net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket(level.getChunk(pos.x, pos.z), level.getLightEngine(), null, null, true), true, true);
+                updateChunkTracking(player, pos, new net.minecraft.network.protocol.Packet<?>[]{new net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket(level.getChunk(pos.x, pos.z), level.getLightEngine(), null, null, true)}, true, true);
             }
 
             @Override
             public void stopChunkTracking(ChunkPos pos) {
-                updateChunkTracking(player, pos, null, false, true);
+                updateChunkTracking(player, pos, new net.minecraft.network.protocol.Packet<?>[0], false, true);
             }
 
             @Override
@@ -55,5 +55,5 @@ public abstract class ChunkMapMixin {
     protected abstract int getPlayerViewDistance(ServerPlayer player);
 
     @Shadow
-    public abstract void updateChunkTracking(ServerPlayer p_140175_, ChunkPos p_140176_, net.minecraft.network.protocol.Packet<?> p_140177_, boolean p_140178_, boolean p_140179_);
+    protected abstract void updateChunkTracking(ServerPlayer player, ChunkPos pos, net.minecraft.network.protocol.Packet<?>[] packets, boolean track, boolean isUnloading);
 }
