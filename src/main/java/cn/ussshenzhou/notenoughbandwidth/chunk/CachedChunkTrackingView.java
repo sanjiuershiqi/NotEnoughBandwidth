@@ -170,7 +170,7 @@ public class CachedChunkTrackingView implements ChunkTrackingView {
             });
 
             // Remove all chunks that are too far from users.
-            enumerate((pos, _) -> {
+            enumerate((pos, time) -> {
                 if (next.center().getChessboardDistance(ChunkPos.getX(pos), ChunkPos.getZ(pos)) > chunkCacheDistance) {
                     ChunkPos chunkPos = new ChunkPos(pos);
 

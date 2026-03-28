@@ -35,7 +35,7 @@ public class AggregationManager {
     }
 
     public synchronized static void takeOver(Packet<?> packet, Connection connection) {
-        PACKET_BUFFER.computeIfAbsent(connection, _ -> new ArrayList<>()).add(packet);
+        PACKET_BUFFER.computeIfAbsent(connection, c -> new ArrayList<>()).add(packet);
     }
 
     private synchronized static void flush() {
