@@ -334,12 +334,12 @@ public class StatScreen extends Screen {
         graphics.fill(0, 0, width, height, 0x80000000);
 
         if (rootPanel != null) {
-            graphics.pose().pushPose();
+            graphics.pose().pushMatrix();
             if (uiScale != 1.0f) {
                 graphics.pose().scale(uiScale, uiScale, 1.0f);
             }
             rootPanel.render(graphics, font, (int) (mouseX / uiScale), (int) (mouseY / uiScale), a);
-            graphics.pose().popPose();
+            graphics.pose().popMatrix();
         }
     }
 
