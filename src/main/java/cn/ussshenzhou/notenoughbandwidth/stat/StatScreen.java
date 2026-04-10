@@ -73,13 +73,18 @@ public class StatScreen extends Screen {
 
         rootPanel = new Panel();
         rootPanel.setLayoutType(Panel.LayoutType.ABSOLUTE);
-        // Don't set width and height directly like this because absolute children add x/y to parent x/y
-        // rootPanel will be positioned at 0,0 implicitly
         rootPanel.setPosition(0, 0);
         rootPanel.setSize(width, height);
 
         Panel mainContainer = new Panel();
-        mainContainer.setLayoutType(Panel.LayoutType.HORIZONTAL);
+        // If the screen is too narrow (e.g. GUI Scale 5 or 6 on smaller resolutions), stack them vertically
+        // Assume minimum width for horizontal layout is 600
+        int singlePanelWidth = Math.min(280, width - 20); // 10 padding on each side
+        if (width < singlePanelWidth * 2 + 40) {
+            mainContainer.setLayoutType(Panel.LayoutType.VERTICAL);
+        } else {
+            mainContainer.setLayoutType(Panel.LayoutType.HORIZONTAL);
+        }
         mainContainer.setSpacing(20);
 
         Panel clientPanel = createPanel(clientTitle, true);
@@ -89,55 +94,99 @@ public class StatScreen extends Screen {
         mainContainer.add(serverPanel);
 
         // Dynamically compute width and height to center
-        // 280 (panel) * 2 + 20 (spacing) = 580
-        int mainWidth = 580;
-        int mainHeight = 220;
-        mainContainer.setPosition((width - mainWidth) / 2, (height - mainHeight) / 2);
+        int mainWidth;
+        int mainHeight;
+        
+        int panelWidth = Math.min(280, width - 20);
+        int panelHeight = Math.min(220, (height - 20) / (width < (panelWidth * 2 + 40) ? 2 : 1));
+        if (panelHeight < 150) panelHeight = 150;
+
+        if (width < panelWidth * 2 + 40) {
+            mainWidth = panelWidth; // Single panel width
+            mainHeight = panelHeight * 2 + 20; // Two panels stacked + spacing
+        } else {
+            mainWidth = panelWidth * 2 + 20;
+            mainHeight = panelHeight;
+        }
+        
+        // Handle vertical overflow for extremely small heights (e.g. GUI Scale 5)
+        int startY = (height - mainHeight) / 2;
+        if (startY < 0) {
+            // Let it be scrollable? No, let's just make it start from top
+            startY = 5;
+        }
+        
+        // Scale down the entire container using PoseStack/GuiGraphics scale?
+        // Let's just adjust spacing or height if it still overlaps.
+        // Actually, the main container is now dynamically sized. Let's make sure elements inside are properly constrained.
+        
+        // Ensure width isn't negative
+        int startX = (width - mainWidth) / 2;
+        if (startX < 0) startX = 10;
+        
+        mainContainer.setPosition(startX, startY);
         mainContainer.setSize(mainWidth, mainHeight);
 
         rootPanel.add(mainContainer);
         
         // Initial layout and data update
         updateData();
+        rootPanel.layout(font);
         updateRatioTextPositions();
         rootPanel.layout(font);
     }
 
     private Panel createPanel(Component title, boolean isClient) {
         Panel panel = new Panel();
-        panel.setSize(280, 220); // Increased from 210 to 220 to fit increased margins
+        // Dynamically scale panel width if the screen is narrower than the default 280
+        int panelWidth = Math.min(280, width - 20); // 10 padding on each side
+        // If height is very small, we might want to shrink the panel height and text spacing
+        int panelHeight = Math.min(220, (height - 20) / (width < (panelWidth * 2 + 40) ? 2 : 1));
+        if (panelHeight < 150) panelHeight = 150; // Minimum usable height
+        
+        panel.setSize(panelWidth, panelHeight); 
         panel.setLayoutType(Panel.LayoutType.ABSOLUTE);
         // Rounded background with transparent dark color and white border
         panel.setBackground(0x90000000, 0xAAFFFFFF, 8);
 
         Text titleText = new Text(title);
         titleText.setCentered(true);
-        titleText.setPosition(140, 15);
+        titleText.setPosition(panelWidth / 2, 10);
         panel.add(titleText);
 
-        Panel inboundPanel = createDataSection(true, isClient);
-        inboundPanel.setPosition(15, 40);
+        int sectionHeight = (panelHeight - 30) / 2; // Remaining height for 2 sections
+        
+        Panel inboundPanel = createDataSection(true, isClient, panelWidth, sectionHeight);
+        inboundPanel.setPosition(10, 30);
         panel.add(inboundPanel);
 
-        Panel outboundPanel = createDataSection(false, isClient);
-        outboundPanel.setPosition(15, 130); // Increased from 125 to 130
+        Panel outboundPanel = createDataSection(false, isClient, panelWidth, sectionHeight);
+        outboundPanel.setPosition(10, 30 + sectionHeight);
         panel.add(outboundPanel);
 
         return panel;
     }
 
-    private Panel createDataSection(boolean isInbound, boolean isClient) {
+    private Panel createDataSection(boolean isInbound, boolean isClient, int panelWidth, int maxSectionHeight) {
         Panel panel = new Panel();
         panel.setLayoutType(Panel.LayoutType.ABSOLUTE);
-        panel.setSize(250, 70); // Increased from 60 to 70 to fit new spacing
+        int innerWidth = panelWidth - 20; // 10 padding on each side of the panel
+        
+        // Dynamically adjust vertical spacing to prevent overlap
+        int lineGap = Math.max(9, (maxSectionHeight - 40) / 3); 
+        int titleY = 0;
+        int rowY = titleY + 12;
+        int barY = rowY + lineGap * 3 + 4; // Give it 4px gap below rawLabel
+        
+        panel.setSize(innerWidth, barY + 12); 
 
         Component titleComp = isInbound ? inboundTitle : outboundTitle;
         Text sectionTitle = new Text(titleComp);
-        sectionTitle.setPosition(0, 0);
+        sectionTitle.setPosition(0, titleY);
         panel.add(sectionTitle);
 
-        int rowY = 15;
-        int valX = 100;
+        // Dynamically compute the value X offset based on innerWidth
+        int valX = Math.min(100, innerWidth / 2 + 10);
 
         Text speedLbl = new Text(speedLabel);
         speedLbl.setPosition(0, rowY);
@@ -148,30 +197,29 @@ public class StatScreen extends Screen {
         panel.add(speedVal);
 
         Text actualLbl = new Text(actualLabel);
-        actualLbl.setPosition(0, rowY + 12);
+        actualLbl.setPosition(0, rowY + lineGap);
         panel.add(actualLbl);
 
         Text actualVal = new Text(Component.empty());
-        actualVal.setPosition(valX, rowY + 12);
+        actualVal.setPosition(valX, rowY + lineGap);
         panel.add(actualVal);
 
         Text rawLbl = new Text(rawLabel);
-        rawLbl.setPosition(0, rowY + 24);
+        rawLbl.setPosition(0, rowY + lineGap * 2);
         panel.add(rawLbl);
 
         Text rawVal = new Text(Component.empty());
-        rawVal.setPosition(valX, rowY + 24);
+        rawVal.setPosition(valX, rowY + lineGap * 2);
         panel.add(rawVal);
 
-        ProgressBar bar = new ProgressBar(250, 8);
-        bar.setPosition(0, 44); // Increased from 40 to 44 to avoid overlap with rawLbl
+        ProgressBar bar = new ProgressBar(innerWidth, 8);
+        bar.setPosition(0, barY);
         int fillColor = isInbound ? 0xFF55FF55 : 0xFFFF5555;
         bar.setColors(0xFF333333, 0xFF555555, fillColor);
         panel.add(bar);
 
         Text ratioVal = new Text(Component.empty());
-        // Temporary position, updated dynamically based on width
-        ratioVal.setPosition(200, 33); // Increased from 30 to 33
+        ratioVal.setPosition(innerWidth - 50, barY - 11);
         panel.add(ratioVal);
 
         if (isClient) {
@@ -213,6 +261,7 @@ public class StatScreen extends Screen {
         if (tick % 10 == 0) {
             ClientPacketDistributor.sendToServer(new StatQuery());
             updateData();
+            rootPanel.layout(font);
             updateRatioTextPositions();
             rootPanel.layout(font);
         }
@@ -268,17 +317,27 @@ public class StatScreen extends Screen {
     private void updateRatioTextPositions() {
         if (font == null) return;
         
-        adjustRatioText(clientInRatioText);
-        adjustRatioText(clientOutRatioText);
-        adjustRatioText(serverInRatioText);
-        adjustRatioText(serverOutRatioText);
+        int panelWidth = Math.min(280, width - 20);
+        int innerWidth = panelWidth - 20; // 10 padding on each side of panel
+        
+        int panelHeight = Math.min(220, (height - 20) / (width < (panelWidth * 2 + 40) ? 2 : 1));
+        if (panelHeight < 150) panelHeight = 150;
+        int sectionHeight = (panelHeight - 30) / 2;
+        int lineGap = Math.max(9, (sectionHeight - 40) / 3); 
+        int titleY = 0;
+        int rowY = titleY + 12;
+        int barY = rowY + lineGap * 3 + 4;
+        
+        adjustRatioText(clientInRatioText, innerWidth, barY);
+        adjustRatioText(clientOutRatioText, innerWidth, barY);
+        adjustRatioText(serverInRatioText, innerWidth, barY);
+        adjustRatioText(serverOutRatioText, innerWidth, barY);
     }
 
-    private void adjustRatioText(Text textElement) {
+    private void adjustRatioText(Text textElement, int innerWidth, int barY) {
         int w = textElement.getWidth();
-        // Right align within the 250px container width. x = 250 - width - 5.
-        // Y is set to 33 to match the new progress bar Y (44) - 11px
-        textElement.setPosition(250 - w - 5, 33);
+        // Right align within the dynamically computed innerWidth.
+        textElement.setPosition(innerWidth - w - 5, barY - 11);
         // Important: force absolute position update since this is called after root layout in tick()
         // But since we are calling rootPanel.layout(font) AFTER updating positions, we just setPosition (relative)
     }
