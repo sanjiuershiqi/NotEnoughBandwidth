@@ -1,6 +1,9 @@
 package cn.ussshenzhou.notenoughbandwidth.stat;
 
 import cn.ussshenzhou.network.StatQuery;
+import cn.ussshenzhou.notenoughbandwidth.ui.Panel;
+import cn.ussshenzhou.notenoughbandwidth.ui.ProgressBar;
+import cn.ussshenzhou.notenoughbandwidth.ui.Text;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -14,54 +17,34 @@ import static cn.ussshenzhou.notenoughbandwidth.stat.SimpleStatManager.*;
 public class StatScreen extends Screen {
     private int tick = 0;
 
-    // Client Data
-    private int clientInSpeed;
-    private long clientInActual;
-    private long clientInRaw;
-    
-    private int clientOutSpeed;
-    private long clientOutActual;
-    private long clientOutRaw;
+    // UI Framework root
+    private Panel rootPanel;
 
-    // Server Data
-    private int serverInSpeed;
-    private long serverInActual;
-    private long serverInRaw;
-    
-    private int serverOutSpeed;
-    private long serverOutActual;
-    private long serverOutRaw;
+    // Client Data Cached Elements
+    private Text clientInSpeedText;
+    private Text clientInActualText;
+    private Text clientInRawText;
+    private ProgressBar clientInRatioBar;
+    private Text clientInRatioText;
 
-    // Layout and UI elements
-    private net.minecraft.client.gui.components.StringWidget clientTitleWidget;
-    private net.minecraft.client.gui.components.StringWidget serverTitleWidget;
-    private net.minecraft.client.gui.layouts.LinearLayout layout;
-    
-    // Client Data Cached Strings
-    private Component clientInSpeedStr = Component.empty();
-    private Component clientInActualStr = Component.empty();
-    private Component clientInRawStr = Component.empty();
-    private Component clientInRatioStr = Component.empty();
-    private double clientInRatio = 0.0;
-    
-    private Component clientOutSpeedStr = Component.empty();
-    private Component clientOutActualStr = Component.empty();
-    private Component clientOutRawStr = Component.empty();
-    private Component clientOutRatioStr = Component.empty();
-    private double clientOutRatio = 0.0;
+    private Text clientOutSpeedText;
+    private Text clientOutActualText;
+    private Text clientOutRawText;
+    private ProgressBar clientOutRatioBar;
+    private Text clientOutRatioText;
 
-    // Server Data Cached Strings
-    private Component serverInSpeedStr = Component.empty();
-    private Component serverInActualStr = Component.empty();
-    private Component serverInRawStr = Component.empty();
-    private Component serverInRatioStr = Component.empty();
-    private double serverInRatio = 0.0;
-    
-    private Component serverOutSpeedStr = Component.empty();
-    private Component serverOutActualStr = Component.empty();
-    private Component serverOutRawStr = Component.empty();
-    private Component serverOutRatioStr = Component.empty();
-    private double serverOutRatio = 0.0;
+    // Server Data Cached Elements
+    private Text serverInSpeedText;
+    private Text serverInActualText;
+    private Text serverInRawText;
+    private ProgressBar serverInRatioBar;
+    private Text serverInRatioText;
+
+    private Text serverOutSpeedText;
+    private Text serverOutActualText;
+    private Text serverOutRawText;
+    private ProgressBar serverOutRatioBar;
+    private Text serverOutRatioText;
 
     private Component clientTitle;
     private Component serverTitle;
@@ -74,8 +57,8 @@ public class StatScreen extends Screen {
 
     public StatScreen() {
         super(Component.empty());
-        clientTitle = Component.translatable("stat.notenoughbandwidth.client");
-        serverTitle = Component.translatable("stat.notenoughbandwidth.server");
+        clientTitle = Component.translatable("stat.notenoughbandwidth.client").withColor(0xFFFFAA00);
+        serverTitle = Component.translatable("stat.notenoughbandwidth.server").withColor(0xFFFFAA00);
         inboundTitle = Component.translatable("stat.notenoughbandwidth.inbound").withColor(0x55FF55);
         outboundTitle = Component.translatable("stat.notenoughbandwidth.outbound").withColor(0xFF5555);
         speedLabel = Component.translatable("stat.notenoughbandwidth.speed").withColor(0xFFAAAAAA);
@@ -85,59 +68,217 @@ public class StatScreen extends Screen {
     }
 
     @Override
+    protected void init() {
+        super.init();
+
+        rootPanel = new Panel();
+        rootPanel.setLayoutType(Panel.LayoutType.ABSOLUTE);
+        rootPanel.setSize(width, height);
+
+        Panel mainContainer = new Panel();
+        mainContainer.setLayoutType(Panel.LayoutType.HORIZONTAL);
+        mainContainer.setSpacing(20);
+
+        Panel clientPanel = createPanel(clientTitle, true);
+        Panel serverPanel = createPanel(serverTitle, false);
+
+        mainContainer.add(clientPanel);
+        mainContainer.add(serverPanel);
+
+        int mainWidth = 280 * 2 + 20;
+        int mainHeight = 210;
+        mainContainer.setPosition((width - mainWidth) / 2, (height - mainHeight) / 2);
+
+        rootPanel.add(mainContainer);
+        
+        // Initial layout and data update
+        updateData();
+        rootPanel.layout(font);
+        updateRatioTextPositions();
+    }
+
+    private Panel createPanel(Component title, boolean isClient) {
+        Panel panel = new Panel();
+        panel.setSize(280, 210);
+        panel.setLayoutType(Panel.LayoutType.ABSOLUTE);
+        // Rounded background with transparent dark color and white border
+        panel.setBackground(0x90000000, 0xAAFFFFFF, 8);
+
+        Text titleText = new Text(title);
+        titleText.setCentered(true);
+        titleText.setPosition(140, 15);
+        panel.add(titleText);
+
+        Panel inboundPanel = createDataSection(true, isClient);
+        inboundPanel.setPosition(15, 40);
+        panel.add(inboundPanel);
+
+        Panel outboundPanel = createDataSection(false, isClient);
+        outboundPanel.setPosition(15, 125);
+        panel.add(outboundPanel);
+
+        return panel;
+    }
+
+    private Panel createDataSection(boolean isInbound, boolean isClient) {
+        Panel panel = new Panel();
+        panel.setLayoutType(Panel.LayoutType.ABSOLUTE);
+        panel.setSize(250, 60);
+
+        Component titleComp = isInbound ? inboundTitle : outboundTitle;
+        Text sectionTitle = new Text(titleComp);
+        sectionTitle.setPosition(0, 0);
+        panel.add(sectionTitle);
+
+        int rowY = 15;
+        int valX = 100;
+
+        Text speedLbl = new Text(speedLabel);
+        speedLbl.setPosition(0, rowY);
+        panel.add(speedLbl);
+
+        Text speedVal = new Text(Component.empty());
+        speedVal.setPosition(valX, rowY);
+        panel.add(speedVal);
+
+        Text actualLbl = new Text(actualLabel);
+        actualLbl.setPosition(0, rowY + 12);
+        panel.add(actualLbl);
+
+        Text actualVal = new Text(Component.empty());
+        actualVal.setPosition(valX, rowY + 12);
+        panel.add(actualVal);
+
+        Text rawLbl = new Text(rawLabel);
+        rawLbl.setPosition(0, rowY + 24);
+        panel.add(rawLbl);
+
+        Text rawVal = new Text(Component.empty());
+        rawVal.setPosition(valX, rowY + 24);
+        panel.add(rawVal);
+
+        ProgressBar bar = new ProgressBar(250, 8);
+        bar.setPosition(0, 40);
+        int fillColor = isInbound ? 0xFF55FF55 : 0xFFFF5555;
+        bar.setColors(0xFF333333, 0xFF555555, fillColor);
+        panel.add(bar);
+
+        Text ratioVal = new Text(Component.empty());
+        // Temporary position, updated dynamically based on width
+        ratioVal.setPosition(200, 30);
+        panel.add(ratioVal);
+
+        if (isClient) {
+            if (isInbound) {
+                clientInSpeedText = speedVal;
+                clientInActualText = actualVal;
+                clientInRawText = rawVal;
+                clientInRatioBar = bar;
+                clientInRatioText = ratioVal;
+            } else {
+                clientOutSpeedText = speedVal;
+                clientOutActualText = actualVal;
+                clientOutRawText = rawVal;
+                clientOutRatioBar = bar;
+                clientOutRatioText = ratioVal;
+            }
+        } else {
+            if (isInbound) {
+                serverInSpeedText = speedVal;
+                serverInActualText = actualVal;
+                serverInRawText = rawVal;
+                serverInRatioBar = bar;
+                serverInRatioText = ratioVal;
+            } else {
+                serverOutSpeedText = speedVal;
+                serverOutActualText = actualVal;
+                serverOutRawText = rawVal;
+                serverOutRatioBar = bar;
+                serverOutRatioText = ratioVal;
+            }
+        }
+
+        return panel;
+    }
+
+    @Override
     public void tick() {
         super.tick();
         if (tick % 10 == 0) {
             ClientPacketDistributor.sendToServer(new StatQuery());
-            
-            clientInSpeed = (int) LOCAL.inboundSpeedBaked().averageIn1s();
-            clientInActual = LOCAL.inboundBytesBaked().get();
-            clientInRaw = LOCAL.inboundBytesRaw().get();
-            
-            clientOutSpeed = (int) LOCAL.outboundSpeedBaked().averageIn1s();
-            clientOutActual = LOCAL.outboundBytesBaked().get();
-            clientOutRaw = LOCAL.outboundBytesRaw().get();
-
-            serverInSpeed = (int) inboundSpeedBakedServer;
-            serverInActual = inboundBytesBakedServer;
-            serverInRaw = inboundBytesRawServer;
-            
-            serverOutSpeed = (int) outboundSpeedBakedServer;
-            serverOutActual = outboundBytesBakedServer;
-            serverOutRaw = outboundBytesRawServer;
-            
-            // Cache Formatted Strings and Components
-            clientInSpeedStr = Component.literal(getReadableSpeed(clientInSpeed));
-            clientInActualStr = Component.literal(getReadableSize(clientInActual));
-            clientInRawStr = Component.literal(getReadableSize(clientInRaw));
-            clientInRatio = calculateRatio(clientInActual, clientInRaw);
-            clientInRatioStr = buildRatioComponent(clientInRatio);
-
-            clientOutSpeedStr = Component.literal(getReadableSpeed(clientOutSpeed));
-            clientOutActualStr = Component.literal(getReadableSize(clientOutActual));
-            clientOutRawStr = Component.literal(getReadableSize(clientOutRaw));
-            clientOutRatio = calculateRatio(clientOutActual, clientOutRaw);
-            clientOutRatioStr = buildRatioComponent(clientOutRatio);
-
-            serverInSpeedStr = Component.literal(getReadableSpeed(serverInSpeed));
-            serverInActualStr = Component.literal(getReadableSize(serverInActual));
-            serverInRawStr = Component.literal(getReadableSize(serverInRaw));
-            serverInRatio = calculateRatio(serverInActual, serverInRaw);
-            serverInRatioStr = buildRatioComponent(serverInRatio);
-
-            serverOutSpeedStr = Component.literal(getReadableSpeed(serverOutSpeed));
-            serverOutActualStr = Component.literal(getReadableSize(serverOutActual));
-            serverOutRawStr = Component.literal(getReadableSize(serverOutRaw));
-            serverOutRatio = calculateRatio(serverOutActual, serverOutRaw);
-            serverOutRatioStr = buildRatioComponent(serverOutRatio);
+            updateData();
+            rootPanel.layout(font);
+            updateRatioTextPositions();
         }
         tick++;
+    }
+
+    private void updateData() {
+        int clientInSpeed = (int) LOCAL.inboundSpeedBaked().averageIn1s();
+        long clientInActual = LOCAL.inboundBytesBaked().get();
+        long clientInRaw = LOCAL.inboundBytesRaw().get();
+
+        int clientOutSpeed = (int) LOCAL.outboundSpeedBaked().averageIn1s();
+        long clientOutActual = LOCAL.outboundBytesBaked().get();
+        long clientOutRaw = LOCAL.outboundBytesRaw().get();
+
+        int serverInSpeed = (int) inboundSpeedBakedServer;
+        long serverInActual = inboundBytesBakedServer;
+        long serverInRaw = inboundBytesRawServer;
+
+        int serverOutSpeed = (int) outboundSpeedBakedServer;
+        long serverOutActual = outboundBytesBakedServer;
+        long serverOutRaw = outboundBytesRawServer;
+
+        clientInSpeedText.setComponent(Component.literal(getReadableSpeed(clientInSpeed)));
+        clientInActualText.setComponent(Component.literal(getReadableSize(clientInActual)));
+        clientInRawText.setComponent(Component.literal(getReadableSize(clientInRaw)));
+        double cInRatio = calculateRatio(clientInActual, clientInRaw);
+        clientInRatioBar.setRatio(cInRatio);
+        clientInRatioText.setComponent(buildRatioComponent(cInRatio));
+
+        clientOutSpeedText.setComponent(Component.literal(getReadableSpeed(clientOutSpeed)));
+        clientOutActualText.setComponent(Component.literal(getReadableSize(clientOutActual)));
+        clientOutRawText.setComponent(Component.literal(getReadableSize(clientOutRaw)));
+        double cOutRatio = calculateRatio(clientOutActual, clientOutRaw);
+        clientOutRatioBar.setRatio(cOutRatio);
+        clientOutRatioText.setComponent(buildRatioComponent(cOutRatio));
+
+        serverInSpeedText.setComponent(Component.literal(getReadableSpeed(serverInSpeed)));
+        serverInActualText.setComponent(Component.literal(getReadableSize(serverInActual)));
+        serverInRawText.setComponent(Component.literal(getReadableSize(serverInRaw)));
+        double sInRatio = calculateRatio(serverInActual, serverInRaw);
+        serverInRatioBar.setRatio(sInRatio);
+        serverInRatioText.setComponent(buildRatioComponent(sInRatio));
+
+        serverOutSpeedText.setComponent(Component.literal(getReadableSpeed(serverOutSpeed)));
+        serverOutActualText.setComponent(Component.literal(getReadableSize(serverOutActual)));
+        serverOutRawText.setComponent(Component.literal(getReadableSize(serverOutRaw)));
+        double sOutRatio = calculateRatio(serverOutActual, serverOutRaw);
+        serverOutRatioBar.setRatio(sOutRatio);
+        serverOutRatioText.setComponent(buildRatioComponent(sOutRatio));
+    }
+
+    private void updateRatioTextPositions() {
+        if (font == null) return;
+        
+        adjustRatioText(clientInRatioText);
+        adjustRatioText(clientOutRatioText);
+        adjustRatioText(serverInRatioText);
+        adjustRatioText(serverOutRatioText);
+    }
+
+    private void adjustRatioText(Text textElement) {
+        int w = textElement.getWidth();
+        // Right align within the 250px container width. x = 250 - width - 5.
+        // Y is set to 30.
+        textElement.setPosition(250 - w - 5, 30);
     }
 
     private double calculateRatio(long actual, long raw) {
         if (raw == 0) return 0.0;
         double ratio = (double) actual / raw;
-        if (ratio > 1.0) ratio = 1.0; 
+        if (ratio > 1.0) ratio = 1.0;
         if (ratio < 0.0) ratio = 0.0;
         return ratio;
     }
@@ -148,118 +289,14 @@ public class StatScreen extends Screen {
     }
 
     @Override
-    protected void init() {
-        super.init();
-
-        this.layout = net.minecraft.client.gui.layouts.LinearLayout.horizontal().spacing(20);
-        
-        var clientPanel = net.minecraft.client.gui.layouts.LinearLayout.vertical().spacing(10);
-        clientTitleWidget = new net.minecraft.client.gui.components.StringWidget(clientTitle, this.font);
-        // StringWidget in 1.21.1 uses withColor or similar, but since we already draw it manually below, 
-        // we can just use the component's own color, or we can set it if available.
-        // clientTitleWidget.setColor(0xFFFFAA00); // Removed due to mapping changes
-        clientPanel.addChild(clientTitleWidget, settings -> settings.alignHorizontallyCenter());
-        
-        var serverPanel = net.minecraft.client.gui.layouts.LinearLayout.vertical().spacing(10);
-        serverTitleWidget = new net.minecraft.client.gui.components.StringWidget(serverTitle, this.font);
-        // serverTitleWidget.setColor(0xFFFFAA00); // Removed due to mapping changes
-        serverPanel.addChild(serverTitleWidget, settings -> settings.alignHorizontallyCenter());
-        
-        this.layout.addChild(clientPanel);
-        this.layout.addChild(serverPanel);
-        
-        this.layout.arrangeElements();
-    }
-
-    @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         super.extractRenderState(graphics, mouseX, mouseY, a);
-        // Fallback to traditional dark background to avoid method mapping issues across NeoForge minor versions
+        // Dim the background
         graphics.fill(0, 0, width, height, 0x80000000);
 
-        int panelWidth = 280;
-        int panelHeight = 210;
-        int gap = 20;
-
-        int totalWidth = panelWidth * 2 + gap;
-        int startX = (width - totalWidth) / 2;
-        int startY = (height - panelHeight) / 2;
-
-        int clientX = startX;
-        int serverX = startX + panelWidth + gap;
-
-        // In 1.21, GuiGraphics doesn't expose renderTooltipBackground easily or it needs a tooltip object
-        // Let's just use fill but with a nicer dark color to match the modern blurred background
-        graphics.fill(clientX, startY, clientX + panelWidth, startY + panelHeight, 0x90000000);
-        graphics.fill(serverX, startY, serverX + panelWidth, startY + panelHeight, 0x90000000);
-        
-        // Draw Panels Border
-        drawBorder(graphics, clientX, startY, panelWidth, panelHeight, 0xAAFFFFFF);
-        drawBorder(graphics, serverX, startY, panelWidth, panelHeight, 0xAAFFFFFF);
-        int titleY = startY + 15;
-        drawCenteredString(graphics, font, clientTitle, clientX + panelWidth / 2, titleY, 0xFFFFAA00);
-        drawCenteredString(graphics, font, serverTitle, serverX + panelWidth / 2, titleY, 0xFFFFAA00);
-        
-        // Render Data for Client
-        renderDataSection(graphics, font, clientX + 15, startY + 40, panelWidth - 30, true, clientInSpeedStr, clientInActualStr, clientInRawStr, clientInRatio, clientInRatioStr);
-        renderDataSection(graphics, font, clientX + 15, startY + 125, panelWidth - 30, false, clientOutSpeedStr, clientOutActualStr, clientOutRawStr, clientOutRatio, clientOutRatioStr);
-
-        // Render Data for Server
-        renderDataSection(graphics, font, serverX + 15, startY + 40, panelWidth - 30, true, serverInSpeedStr, serverInActualStr, serverInRawStr, serverInRatio, serverInRatioStr);
-        renderDataSection(graphics, font, serverX + 15, startY + 125, panelWidth - 30, false, serverOutSpeedStr, serverOutActualStr, serverOutRawStr, serverOutRatio, serverOutRatioStr);
-    }
-
-    private void drawBorder(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int color) {
-        graphics.fill(x, y, x + width, y + 1, color); // Top
-        graphics.fill(x, y + height - 1, x + width, y + height, color); // Bottom
-        graphics.fill(x, y, x + 1, y + height, color); // Left
-        graphics.fill(x + width - 1, y, x + width, y + height, color); // Right
-    }
-
-    private void drawCenteredString(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, Component text, int x, int y, int color) {
-        int strWidth = font.width(text);
-        var textRenderer = graphics.textRenderer();
-        textRenderer.accept(x - strWidth / 2, y, text);
-    }
-
-    private void renderDataSection(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, int width, boolean isInbound, Component speedStr, Component actualStr, Component rawStr, double ratio, Component ratioStr) {
-        // Minecraft Green / Minecraft Red
-        Component titleComp = isInbound ? inboundTitle : outboundTitle;
-        var textRenderer = graphics.textRenderer();
-        
-        textRenderer.accept(x, y, titleComp);
-
-        int rowY = y + 15;
-        int valueXOffset = 100;
-        
-        drawDataRow(graphics, font, x, rowY, speedLabel, speedStr, valueXOffset);
-        drawDataRow(graphics, font, x, rowY + 12, actualLabel, actualStr, valueXOffset);
-        drawDataRow(graphics, font, x, rowY + 24, rawLabel, rawStr, valueXOffset);
-
-        // Render Ratio Bar
-        int barY = rowY + 40;
-        int barHeight = 8;
-        
-        // Background of the bar
-        graphics.fill(x, barY, x + width, barY + barHeight, 0xFF333333);
-        drawBorder(graphics, x, barY, width, barHeight, 0xFF555555);
-        
-        // Fill of the bar
-        int fillWidth = (int) (width * ratio);
-        int fillColor = isInbound ? 0xFF55FF55 : 0xFFFF5555;
-        if (fillWidth > 0) {
-            graphics.fill(x, barY, x + fillWidth, barY + barHeight, fillColor);
+        if (rootPanel != null) {
+            rootPanel.render(graphics, font, mouseX, mouseY, a);
         }
-        
-        // Ratio Text
-        int strWidth = font.width(ratioStr);
-        textRenderer.accept(x + width - strWidth - 5, barY - 10, ratioStr);
-    }
-
-    private void drawDataRow(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, Component labelComp, Component valueComp, int valueXOffset) {
-        var textRenderer = graphics.textRenderer();
-        textRenderer.accept(x, y, labelComp);
-        textRenderer.accept(x + valueXOffset, y, valueComp);
     }
 
     private String getReadableSpeed(int bytes) {
