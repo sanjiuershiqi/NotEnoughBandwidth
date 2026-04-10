@@ -32,7 +32,7 @@ public class Text extends Element {
 
     @Override
     public void layout(Font font) {
-        if (component != null) {
+        if (component != null && font != null) {
             this.width = font.width(component);
             this.height = font.lineHeight;
         } else {

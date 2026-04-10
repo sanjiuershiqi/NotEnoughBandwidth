@@ -3,26 +3,45 @@ package cn.ussshenzhou.notenoughbandwidth.ui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 public abstract class Element {
-    protected int x;
-    protected int y;
+    protected int x = 0;
+    protected int y = 0;
+    protected int relX = 0;
+    protected int relY = 0;
     protected int width;
     protected int height;
-    
+
     // For layout system
     protected int marginTop;
     protected int marginBottom;
     protected int marginLeft;
     protected int marginRight;
-    
+
     protected boolean visible = true;
 
     public Element() {
     }
 
     public void setPosition(int x, int y) {
+        this.relX = x;
+        this.relY = y;
+        // In most cases, relX/relY are local to parent, x/y are absolute on screen.
+        // For backwards compatibility and simplicity, let's keep x/y as the absolute rendering coordinates.
         this.x = x;
         this.y = y;
     }
+
+    public void setAbsolutePosition(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public void setRelativePosition(int relX, int relY) {
+        this.relX = relX;
+        this.relY = relY;
+    }
+
+    public int getRelX() { return relX; }
+    public int getRelY() { return relY; }
 
     public void setSize(int width, int height) {
         this.width = width;

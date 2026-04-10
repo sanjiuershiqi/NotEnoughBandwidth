@@ -90,17 +90,17 @@ public class Panel extends Element {
             
             if (layoutType == LayoutType.VERTICAL) {
                 currentY += child.getMarginTop();
-                child.setPosition(currentX + child.getMarginLeft(), currentY);
-                child.layout(font); 
+                child.setAbsolutePosition(currentX + child.getMarginLeft(), currentY);
+                child.layout(font);
                 
                 int childTotalWidth = child.getWidth() + child.getMarginLeft() + child.getMarginRight();
                 if (childTotalWidth > maxWidth) maxWidth = childTotalWidth;
                 
                 currentY += child.getHeight() + child.getMarginBottom() + spacing;
-            } 
+            }
             else if (layoutType == LayoutType.HORIZONTAL) {
                 currentX += child.getMarginLeft();
-                child.setPosition(currentX, currentY + child.getMarginTop());
+                child.setAbsolutePosition(currentX, currentY + child.getMarginTop());
                 child.layout(font);
                 
                 int childTotalHeight = child.getHeight() + child.getMarginTop() + child.getMarginBottom();
@@ -109,10 +109,10 @@ public class Panel extends Element {
                 currentX += child.getWidth() + child.getMarginRight() + spacing;
             }
             else {
-                child.setPosition(x + child.getX(), y + child.getY());
+                child.setAbsolutePosition(x + child.getRelX() + padding, y + child.getRelY() + padding);
                 child.layout(font);
-                if (child.getX() + child.getWidth() > maxWidth) maxWidth = child.getX() + child.getWidth() - x;
-                if (child.getY() + child.getHeight() > maxHeight) maxHeight = child.getY() + child.getHeight() - y;
+                if (child.getRelX() + child.getWidth() + padding > maxWidth) maxWidth = child.getRelX() + child.getWidth() + padding;
+                if (child.getRelY() + child.getHeight() + padding > maxHeight) maxHeight = child.getRelY() + child.getHeight() + padding;
             }
         }
         
@@ -140,9 +140,9 @@ public class Panel extends Element {
                     int availableSpace = this.width - padding * 2;
                     int childTotalWidth = child.getWidth() + child.getMarginLeft() + child.getMarginRight();
                     if (alignment == Alignment.CENTER) {
-                        child.setPosition(x + padding + (availableSpace - childTotalWidth) / 2 + child.getMarginLeft(), child.getY());
+                        child.setAbsolutePosition(x + padding + (availableSpace - childTotalWidth) / 2 + child.getMarginLeft(), child.getY());
                     } else if (alignment == Alignment.END) {
-                        child.setPosition(x + width - padding - child.getWidth() - child.getMarginRight(), child.getY());
+                        child.setAbsolutePosition(x + width - padding - child.getWidth() - child.getMarginRight(), child.getY());
                     }
                     // Relayout child if its internal elements need adjustment, but since its size didn't change, we skip for now.
                     // If we want deep relayout, we call child.layout(font) again, but it's not strictly necessary if position doesn't affect its own layout.
@@ -154,9 +154,9 @@ public class Panel extends Element {
                     int availableSpace = this.height - padding * 2;
                     int childTotalHeight = child.getHeight() + child.getMarginTop() + child.getMarginBottom();
                     if (alignment == Alignment.CENTER) {
-                        child.setPosition(child.getX(), y + padding + (availableSpace - childTotalHeight) / 2 + child.getMarginTop());
+                        child.setAbsolutePosition(child.getX(), y + padding + (availableSpace - childTotalHeight) / 2 + child.getMarginTop());
                     } else if (alignment == Alignment.END) {
-                        child.setPosition(child.getX(), y + height - padding - child.getHeight() - child.getMarginBottom());
+                        child.setAbsolutePosition(child.getX(), y + height - padding - child.getHeight() - child.getMarginBottom());
                     }
                     if (child instanceof Panel) {
                         child.layout(font);

@@ -73,6 +73,9 @@ public class StatScreen extends Screen {
 
         rootPanel = new Panel();
         rootPanel.setLayoutType(Panel.LayoutType.ABSOLUTE);
+        // Don't set width and height directly like this because absolute children add x/y to parent x/y
+        // rootPanel will be positioned at 0,0 implicitly
+        rootPanel.setPosition(0, 0);
         rootPanel.setSize(width, height);
 
         Panel mainContainer = new Panel();
@@ -93,8 +96,8 @@ public class StatScreen extends Screen {
         
         // Initial layout and data update
         updateData();
-        rootPanel.layout(font);
         updateRatioTextPositions();
+        rootPanel.layout(font);
     }
 
     private Panel createPanel(Component title, boolean isClient) {
@@ -207,8 +210,8 @@ public class StatScreen extends Screen {
         if (tick % 10 == 0) {
             ClientPacketDistributor.sendToServer(new StatQuery());
             updateData();
-            rootPanel.layout(font);
             updateRatioTextPositions();
+            rootPanel.layout(font);
         }
         tick++;
     }
@@ -273,6 +276,8 @@ public class StatScreen extends Screen {
         // Right align within the 250px container width. x = 250 - width - 5.
         // Y is set to 30.
         textElement.setPosition(250 - w - 5, 30);
+        // Important: force absolute position update since this is called after root layout in tick()
+        // But since we are calling rootPanel.layout(font) AFTER updating positions, we just setPosition (relative)
     }
 
     private double calculateRatio(long actual, long raw) {
