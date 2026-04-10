@@ -88,9 +88,12 @@ public class StatScreen extends Screen {
         mainContainer.add(clientPanel);
         mainContainer.add(serverPanel);
 
-        int mainWidth = 280 * 2 + 20;
-        int mainHeight = 210;
+        // Dynamically compute width and height to center
+        // 280 (panel) * 2 + 20 (spacing) = 580
+        int mainWidth = 580;
+        int mainHeight = 220;
         mainContainer.setPosition((width - mainWidth) / 2, (height - mainHeight) / 2);
+        mainContainer.setSize(mainWidth, mainHeight);
 
         rootPanel.add(mainContainer);
         
@@ -102,7 +105,7 @@ public class StatScreen extends Screen {
 
     private Panel createPanel(Component title, boolean isClient) {
         Panel panel = new Panel();
-        panel.setSize(280, 210);
+        panel.setSize(280, 220); // Increased from 210 to 220 to fit increased margins
         panel.setLayoutType(Panel.LayoutType.ABSOLUTE);
         // Rounded background with transparent dark color and white border
         panel.setBackground(0x90000000, 0xAAFFFFFF, 8);
@@ -117,7 +120,7 @@ public class StatScreen extends Screen {
         panel.add(inboundPanel);
 
         Panel outboundPanel = createDataSection(false, isClient);
-        outboundPanel.setPosition(15, 125);
+        outboundPanel.setPosition(15, 130); // Increased from 125 to 130
         panel.add(outboundPanel);
 
         return panel;
@@ -126,7 +129,7 @@ public class StatScreen extends Screen {
     private Panel createDataSection(boolean isInbound, boolean isClient) {
         Panel panel = new Panel();
         panel.setLayoutType(Panel.LayoutType.ABSOLUTE);
-        panel.setSize(250, 60);
+        panel.setSize(250, 70); // Increased from 60 to 70 to fit new spacing
 
         Component titleComp = isInbound ? inboundTitle : outboundTitle;
         Text sectionTitle = new Text(titleComp);
@@ -161,14 +164,14 @@ public class StatScreen extends Screen {
         panel.add(rawVal);
 
         ProgressBar bar = new ProgressBar(250, 8);
-        bar.setPosition(0, 40);
+        bar.setPosition(0, 44); // Increased from 40 to 44 to avoid overlap with rawLbl
         int fillColor = isInbound ? 0xFF55FF55 : 0xFFFF5555;
         bar.setColors(0xFF333333, 0xFF555555, fillColor);
         panel.add(bar);
 
         Text ratioVal = new Text(Component.empty());
         // Temporary position, updated dynamically based on width
-        ratioVal.setPosition(200, 30);
+        ratioVal.setPosition(200, 33); // Increased from 30 to 33
         panel.add(ratioVal);
 
         if (isClient) {
@@ -274,8 +277,8 @@ public class StatScreen extends Screen {
     private void adjustRatioText(Text textElement) {
         int w = textElement.getWidth();
         // Right align within the 250px container width. x = 250 - width - 5.
-        // Y is set to 30.
-        textElement.setPosition(250 - w - 5, 30);
+        // Y is set to 33 to match the new progress bar Y (44) - 11px
+        textElement.setPosition(250 - w - 5, 33);
         // Important: force absolute position update since this is called after root layout in tick()
         // But since we are calling rootPanel.layout(font) AFTER updating positions, we just setPosition (relative)
     }
