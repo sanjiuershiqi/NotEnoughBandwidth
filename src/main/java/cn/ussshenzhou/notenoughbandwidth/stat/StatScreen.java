@@ -174,7 +174,8 @@ public class StatScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         super.extractRenderState(graphics, mouseX, mouseY, a);
-        graphics.renderBlurredBackground(a);
+        // Fallback to traditional dark background to avoid method mapping issues across NeoForge minor versions
+        graphics.fill(0, 0, width, height, 0x80000000);
 
         int panelWidth = 280;
         int panelHeight = 210;
