@@ -1,0 +1,10 @@
+{
+  "stat.notenoughbandwidth.client": "客户端",
+  "stat.notenoughbandwidth.server": "服务端",
+  "stat.notenoughbandwidth.inbound": "↓ 接收",
+  "stat.notenoughbandwidth.outbound": "↑ 发送",
+  "stat.notenoughbandwidth.speed": "速率:",
+  "stat.notenoughbandwidth.actual": "压缩后:",
+  "stat.notenoughbandwidth.raw": "压缩前:",
+  "stat.notenoughbandwidth.ratio": "压缩率:"
+}
