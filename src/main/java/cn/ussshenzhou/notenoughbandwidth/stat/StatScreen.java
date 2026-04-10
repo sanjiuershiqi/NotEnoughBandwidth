@@ -89,8 +89,8 @@ public class StatScreen extends Screen {
         
         // Draw Titles
         int titleY = startY + 15;
-        drawCenteredString(graphics, font, Component.literal("Client"), clientX + panelWidth / 2, titleY, 0xFFFFAA00);
-        drawCenteredString(graphics, font, Component.literal("Server"), serverX + panelWidth / 2, titleY, 0xFFFFAA00);
+        drawCenteredString(graphics, font, Component.translatable("stat.notenoughbandwidth.client"), clientX + panelWidth / 2, titleY, 0xFFFFAA00);
+        drawCenteredString(graphics, font, Component.translatable("stat.notenoughbandwidth.server"), serverX + panelWidth / 2, titleY, 0xFFFFAA00);
         
         // Render Data for Client
         renderDataSection(graphics, font, clientX + 15, startY + 45, panelWidth - 30, true, clientInSpeed, clientInActual, clientInRaw);
@@ -115,9 +115,9 @@ public class StatScreen extends Screen {
     }
 
     private void renderDataSection(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, int width, boolean isInbound, int speed, long actual, long raw) {
-        String title = isInbound ? "↓ Inbound" : "↑ Outbound";
+        String titleKey = isInbound ? "stat.notenoughbandwidth.inbound" : "stat.notenoughbandwidth.outbound";
         // Minecraft Green / Minecraft Red
-        Component titleComp = Component.literal(title).withColor(isInbound ? 0x55FF55 : 0xFF5555);
+        Component titleComp = Component.translatable(titleKey).withColor(isInbound ? 0x55FF55 : 0xFF5555);
         var textRenderer = graphics.textRenderer();
         
         textRenderer.accept(x, y, titleComp);
@@ -125,16 +125,18 @@ public class StatScreen extends Screen {
         int rowY = y + 15;
         int valueXOffset = 100;
         
-        drawDataRow(graphics, font, x, rowY, "Speed:", getReadableSpeed(speed), valueXOffset);
-        drawDataRow(graphics, font, x, rowY + 12, "Actual Total:", getReadableSize(actual), valueXOffset);
-        drawDataRow(graphics, font, x, rowY + 24, "Raw Total:", getReadableSize(raw), valueXOffset);
+        drawDataRow(graphics, font, x, rowY, "stat.notenoughbandwidth.speed", getReadableSpeed(speed), valueXOffset);
+        drawDataRow(graphics, font, x, rowY + 12, "stat.notenoughbandwidth.actual", getReadableSize(actual), valueXOffset);
+        drawDataRow(graphics, font, x, rowY + 24, "stat.notenoughbandwidth.raw", getReadableSize(raw), valueXOffset);
 
         // Render Ratio Bar
         int barY = rowY + 40;
         int barHeight = 8;
         
+        // Use double calculation but keep within bounds 0.0 to 1.0
         double ratio = raw == 0 ? 0 : (double) actual / raw;
-        if (ratio > 1.0) ratio = 1.0; // clamp for display
+        if (ratio > 1.0) ratio = 1.0; 
+        if (ratio < 0.0) ratio = 0.0;
         
         // Background of the bar
         graphics.fill(x, barY, x + width, barY + barHeight, 0xFF333333);
@@ -147,16 +149,16 @@ public class StatScreen extends Screen {
             graphics.fill(x, barY, x + fillWidth, barY + barHeight, fillColor);
         }
         
-        // Ratio Text
+        // Ratio Text - Make it more obvious
         String ratioStr = String.format("%.2f%%", ratio * 100);
-        Component ratioComp = Component.literal(ratioStr).withColor(0xFFFFFFFF); // White text
+        Component ratioComp = Component.translatable("stat.notenoughbandwidth.ratio").append(" ").append(ratioStr).withColor(0xFFFFFFFF); // White text
         int strWidth = font.width(ratioComp);
         
         textRenderer.accept(x + width - strWidth - 5, barY - 10, ratioComp);
     }
 
-    private void drawDataRow(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, String label, String value, int valueXOffset) {
-        Component labelComp = Component.literal(label).withColor(0xFFAAAAAA); // Gray
+    private void drawDataRow(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, String labelKey, String value, int valueXOffset) {
+        Component labelComp = Component.translatable(labelKey).withColor(0xFFAAAAAA); // Gray
         Component valueComp = Component.literal(value);
         var textRenderer = graphics.textRenderer();
         

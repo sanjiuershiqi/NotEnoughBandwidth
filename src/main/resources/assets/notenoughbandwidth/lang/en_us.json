@@ -1,0 +1,10 @@
+{
+  "stat.notenoughbandwidth.client": "Client",
+  "stat.notenoughbandwidth.server": "Server",
+  "stat.notenoughbandwidth.inbound": "↓ Inbound",
+  "stat.notenoughbandwidth.outbound": "↑ Outbound",
+  "stat.notenoughbandwidth.speed": "Speed:",
+  "stat.notenoughbandwidth.actual": "Actual Total:",
+  "stat.notenoughbandwidth.raw": "Raw Total:",
+  "stat.notenoughbandwidth.ratio": "Ratio:"
+}
