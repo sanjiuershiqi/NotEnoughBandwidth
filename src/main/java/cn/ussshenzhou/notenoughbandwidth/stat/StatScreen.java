@@ -32,6 +32,32 @@ public class StatScreen extends Screen {
     private long serverOutActual;
     private long serverOutRaw;
 
+    // Client Data Cached Strings
+    private Component clientInSpeedStr = Component.empty();
+    private Component clientInActualStr = Component.empty();
+    private Component clientInRawStr = Component.empty();
+    private Component clientInRatioStr = Component.empty();
+    private double clientInRatio = 0.0;
+    
+    private Component clientOutSpeedStr = Component.empty();
+    private Component clientOutActualStr = Component.empty();
+    private Component clientOutRawStr = Component.empty();
+    private Component clientOutRatioStr = Component.empty();
+    private double clientOutRatio = 0.0;
+
+    // Server Data Cached Strings
+    private Component serverInSpeedStr = Component.empty();
+    private Component serverInActualStr = Component.empty();
+    private Component serverInRawStr = Component.empty();
+    private Component serverInRatioStr = Component.empty();
+    private double serverInRatio = 0.0;
+    
+    private Component serverOutSpeedStr = Component.empty();
+    private Component serverOutActualStr = Component.empty();
+    private Component serverOutRawStr = Component.empty();
+    private Component serverOutRatioStr = Component.empty();
+    private double serverOutRatio = 0.0;
+
     private Component clientTitle;
     private Component serverTitle;
     private Component inboundTitle;
@@ -45,8 +71,8 @@ public class StatScreen extends Screen {
         super(Component.empty());
         clientTitle = Component.translatable("stat.notenoughbandwidth.client");
         serverTitle = Component.translatable("stat.notenoughbandwidth.server");
-        inboundTitle = Component.translatable("stat.notenoughbandwidth.inbound");
-        outboundTitle = Component.translatable("stat.notenoughbandwidth.outbound");
+        inboundTitle = Component.translatable("stat.notenoughbandwidth.inbound").withColor(0x55FF55);
+        outboundTitle = Component.translatable("stat.notenoughbandwidth.outbound").withColor(0xFF5555);
         speedLabel = Component.translatable("stat.notenoughbandwidth.speed").withColor(0xFFAAAAAA);
         actualLabel = Component.translatable("stat.notenoughbandwidth.actual").withColor(0xFFAAAAAA);
         rawLabel = Component.translatable("stat.notenoughbandwidth.raw").withColor(0xFFAAAAAA);
@@ -74,8 +100,46 @@ public class StatScreen extends Screen {
             serverOutSpeed = (int) outboundSpeedBakedServer;
             serverOutActual = outboundBytesBakedServer;
             serverOutRaw = outboundBytesRawServer;
+            
+            // Cache Formatted Strings and Components
+            clientInSpeedStr = Component.literal(getReadableSpeed(clientInSpeed));
+            clientInActualStr = Component.literal(getReadableSize(clientInActual));
+            clientInRawStr = Component.literal(getReadableSize(clientInRaw));
+            clientInRatio = calculateRatio(clientInActual, clientInRaw);
+            clientInRatioStr = buildRatioComponent(clientInRatio);
+
+            clientOutSpeedStr = Component.literal(getReadableSpeed(clientOutSpeed));
+            clientOutActualStr = Component.literal(getReadableSize(clientOutActual));
+            clientOutRawStr = Component.literal(getReadableSize(clientOutRaw));
+            clientOutRatio = calculateRatio(clientOutActual, clientOutRaw);
+            clientOutRatioStr = buildRatioComponent(clientOutRatio);
+
+            serverInSpeedStr = Component.literal(getReadableSpeed(serverInSpeed));
+            serverInActualStr = Component.literal(getReadableSize(serverInActual));
+            serverInRawStr = Component.literal(getReadableSize(serverInRaw));
+            serverInRatio = calculateRatio(serverInActual, serverInRaw);
+            serverInRatioStr = buildRatioComponent(serverInRatio);
+
+            serverOutSpeedStr = Component.literal(getReadableSpeed(serverOutSpeed));
+            serverOutActualStr = Component.literal(getReadableSize(serverOutActual));
+            serverOutRawStr = Component.literal(getReadableSize(serverOutRaw));
+            serverOutRatio = calculateRatio(serverOutActual, serverOutRaw);
+            serverOutRatioStr = buildRatioComponent(serverOutRatio);
         }
         tick++;
+    }
+
+    private double calculateRatio(long actual, long raw) {
+        if (raw == 0) return 0.0;
+        double ratio = (double) actual / raw;
+        if (ratio > 1.0) ratio = 1.0; 
+        if (ratio < 0.0) ratio = 0.0;
+        return ratio;
+    }
+
+    private Component buildRatioComponent(double ratio) {
+        String ratioStr = String.format("%.2f%%", ratio * 100);
+        return ratioLabel.copy().append(" ").append(ratioStr).withColor(0xFFFFFFFF);
     }
 
     @Override
@@ -110,12 +174,12 @@ public class StatScreen extends Screen {
         drawCenteredString(graphics, font, serverTitle, serverX + panelWidth / 2, titleY, 0xFFFFAA00);
         
         // Render Data for Client
-        renderDataSection(graphics, font, clientX + 15, startY + 45, panelWidth - 30, true, clientInSpeed, clientInActual, clientInRaw);
-        renderDataSection(graphics, font, clientX + 15, startY + 130, panelWidth - 30, false, clientOutSpeed, clientOutActual, clientOutRaw);
+        renderDataSection(graphics, font, clientX + 15, startY + 45, panelWidth - 30, true, clientInSpeedStr, clientInActualStr, clientInRawStr, clientInRatio, clientInRatioStr);
+        renderDataSection(graphics, font, clientX + 15, startY + 130, panelWidth - 30, false, clientOutSpeedStr, clientOutActualStr, clientOutRawStr, clientOutRatio, clientOutRatioStr);
 
         // Render Data for Server
-        renderDataSection(graphics, font, serverX + 15, startY + 45, panelWidth - 30, true, serverInSpeed, serverInActual, serverInRaw);
-        renderDataSection(graphics, font, serverX + 15, startY + 130, panelWidth - 30, false, serverOutSpeed, serverOutActual, serverOutRaw);
+        renderDataSection(graphics, font, serverX + 15, startY + 45, panelWidth - 30, true, serverInSpeedStr, serverInActualStr, serverInRawStr, serverInRatio, serverInRatioStr);
+        renderDataSection(graphics, font, serverX + 15, startY + 130, panelWidth - 30, false, serverOutSpeedStr, serverOutActualStr, serverOutRawStr, serverOutRatio, serverOutRatioStr);
     }
 
     private void drawBorder(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int color) {
@@ -131,9 +195,9 @@ public class StatScreen extends Screen {
         textRenderer.accept(x - strWidth / 2, y, text);
     }
 
-    private void renderDataSection(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, int width, boolean isInbound, int speed, long actual, long raw) {
+    private void renderDataSection(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, int width, boolean isInbound, Component speedStr, Component actualStr, Component rawStr, double ratio, Component ratioStr) {
         // Minecraft Green / Minecraft Red
-        Component titleComp = (isInbound ? inboundTitle : outboundTitle).copy().withColor(isInbound ? 0x55FF55 : 0xFF5555);
+        Component titleComp = isInbound ? inboundTitle : outboundTitle;
         var textRenderer = graphics.textRenderer();
         
         textRenderer.accept(x, y, titleComp);
@@ -141,18 +205,13 @@ public class StatScreen extends Screen {
         int rowY = y + 15;
         int valueXOffset = 100;
         
-        drawDataRow(graphics, font, x, rowY, speedLabel, getReadableSpeed(speed), valueXOffset);
-        drawDataRow(graphics, font, x, rowY + 12, actualLabel, getReadableSize(actual), valueXOffset);
-        drawDataRow(graphics, font, x, rowY + 24, rawLabel, getReadableSize(raw), valueXOffset);
+        drawDataRow(graphics, font, x, rowY, speedLabel, speedStr, valueXOffset);
+        drawDataRow(graphics, font, x, rowY + 12, actualLabel, actualStr, valueXOffset);
+        drawDataRow(graphics, font, x, rowY + 24, rawLabel, rawStr, valueXOffset);
 
         // Render Ratio Bar
         int barY = rowY + 40;
         int barHeight = 8;
-        
-        // Use double calculation but keep within bounds 0.0 to 1.0
-        double ratio = raw == 0 ? 0 : (double) actual / raw;
-        if (ratio > 1.0) ratio = 1.0; 
-        if (ratio < 0.0) ratio = 0.0;
         
         // Background of the bar
         graphics.fill(x, barY, x + width, barY + barHeight, 0xFF333333);
@@ -165,18 +224,13 @@ public class StatScreen extends Screen {
             graphics.fill(x, barY, x + fillWidth, barY + barHeight, fillColor);
         }
         
-        // Ratio Text - Make it more obvious
-        String ratioStr = String.format("%.2f%%", ratio * 100);
-        Component ratioComp = ratioLabel.copy().append(" ").append(ratioStr).withColor(0xFFFFFFFF); // White text
-        int strWidth = font.width(ratioComp);
-        
-        textRenderer.accept(x + width - strWidth - 5, barY - 10, ratioComp);
+        // Ratio Text
+        int strWidth = font.width(ratioStr);
+        textRenderer.accept(x + width - strWidth - 5, barY - 10, ratioStr);
     }
 
-    private void drawDataRow(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, Component labelComp, String value, int valueXOffset) {
-        Component valueComp = Component.literal(value);
+    private void drawDataRow(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, Component labelComp, Component valueComp, int valueXOffset) {
         var textRenderer = graphics.textRenderer();
-        
         textRenderer.accept(x, y, labelComp);
         textRenderer.accept(x + valueXOffset, y, valueComp);
     }
