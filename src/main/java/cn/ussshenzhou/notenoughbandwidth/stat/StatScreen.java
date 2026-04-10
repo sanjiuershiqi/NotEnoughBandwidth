@@ -155,13 +155,15 @@ public class StatScreen extends Screen {
         
         var clientPanel = net.minecraft.client.gui.layouts.LinearLayout.vertical().spacing(10);
         clientTitleWidget = new net.minecraft.client.gui.components.StringWidget(clientTitle, this.font);
-        clientTitleWidget.setColor(0xFFFFAA00);
-        clientPanel.addChild(clientTitleWidget, net.minecraft.client.gui.layouts.LayoutSettings::alignHorizontallyCenter);
+        // StringWidget in 1.21.1 uses withColor or similar, but since we already draw it manually below, 
+        // we can just use the component's own color, or we can set it if available.
+        // clientTitleWidget.setColor(0xFFFFAA00); // Removed due to mapping changes
+        clientPanel.addChild(clientTitleWidget, settings -> settings.alignHorizontallyCenter());
         
         var serverPanel = net.minecraft.client.gui.layouts.LinearLayout.vertical().spacing(10);
         serverTitleWidget = new net.minecraft.client.gui.components.StringWidget(serverTitle, this.font);
-        serverTitleWidget.setColor(0xFFFFAA00);
-        serverPanel.addChild(serverTitleWidget, net.minecraft.client.gui.layouts.LayoutSettings::alignHorizontallyCenter);
+        // serverTitleWidget.setColor(0xFFFFAA00); // Removed due to mapping changes
+        serverPanel.addChild(serverTitleWidget, settings -> settings.alignHorizontallyCenter());
         
         this.layout.addChild(clientPanel);
         this.layout.addChild(serverPanel);
@@ -172,7 +174,7 @@ public class StatScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         super.extractRenderState(graphics, mouseX, mouseY, a);
-        graphics.renderBackground();
+        graphics.renderBlurredBackground(a);
 
         int panelWidth = 280;
         int panelHeight = 210;
@@ -185,14 +187,14 @@ public class StatScreen extends Screen {
         int clientX = startX;
         int serverX = startX + panelWidth + gap;
 
-        // Use modern vanilla tooltip background nine-slice
-        // We draw the menu background directly using modern graphics
-        graphics.renderTooltipBackground(clientX, startY, panelWidth, panelHeight, 0);
-        graphics.renderTooltipBackground(serverX, startY, panelWidth, panelHeight, 0);
-
-        var font = this.minecraft.font;
+        // In 1.21, GuiGraphics doesn't expose renderTooltipBackground easily or it needs a tooltip object
+        // Let's just use fill but with a nicer dark color to match the modern blurred background
+        graphics.fill(clientX, startY, clientX + panelWidth, startY + panelHeight, 0x90000000);
+        graphics.fill(serverX, startY, serverX + panelWidth, startY + panelHeight, 0x90000000);
         
-        // Draw Titles using widget positions or manually centered if widget isn't fully set
+        // Draw Panels Border
+        drawBorder(graphics, clientX, startY, panelWidth, panelHeight, 0xAAFFFFFF);
+        drawBorder(graphics, serverX, startY, panelWidth, panelHeight, 0xAAFFFFFF);
         int titleY = startY + 15;
         drawCenteredString(graphics, font, clientTitle, clientX + panelWidth / 2, titleY, 0xFFFFAA00);
         drawCenteredString(graphics, font, serverTitle, serverX + panelWidth / 2, titleY, 0xFFFFAA00);
