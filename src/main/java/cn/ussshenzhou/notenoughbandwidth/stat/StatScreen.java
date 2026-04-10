@@ -85,20 +85,20 @@ public class StatScreen extends Screen {
         drawBorder(graphics, clientX, startY, panelWidth, panelHeight, 0xFF555555);
         drawBorder(graphics, serverX, startY, panelWidth, panelHeight, 0xFF555555);
 
-        var textRenderer = graphics.textRenderer();
+        var font = this.minecraft.font;
         
         // Draw Titles
         int titleY = startY + 15;
-        drawCenteredString(graphics, textRenderer, Component.literal("Client"), clientX + panelWidth / 2, titleY, 0xFFFFAA00);
-        drawCenteredString(graphics, textRenderer, Component.literal("Server"), serverX + panelWidth / 2, titleY, 0xFFFFAA00);
+        drawCenteredString(graphics, font, Component.literal("Client"), clientX + panelWidth / 2, titleY, 0xFFFFAA00);
+        drawCenteredString(graphics, font, Component.literal("Server"), serverX + panelWidth / 2, titleY, 0xFFFFAA00);
         
         // Render Data for Client
-        renderDataSection(graphics, textRenderer, clientX + 15, startY + 45, panelWidth - 30, true, clientInSpeed, clientInActual, clientInRaw);
-        renderDataSection(graphics, textRenderer, clientX + 15, startY + 130, panelWidth - 30, false, clientOutSpeed, clientOutActual, clientOutRaw);
+        renderDataSection(graphics, font, clientX + 15, startY + 45, panelWidth - 30, true, clientInSpeed, clientInActual, clientInRaw);
+        renderDataSection(graphics, font, clientX + 15, startY + 130, panelWidth - 30, false, clientOutSpeed, clientOutActual, clientOutRaw);
 
         // Render Data for Server
-        renderDataSection(graphics, textRenderer, serverX + 15, startY + 45, panelWidth - 30, true, serverInSpeed, serverInActual, serverInRaw);
-        renderDataSection(graphics, textRenderer, serverX + 15, startY + 130, panelWidth - 30, false, serverOutSpeed, serverOutActual, serverOutRaw);
+        renderDataSection(graphics, font, serverX + 15, startY + 45, panelWidth - 30, true, serverInSpeed, serverInActual, serverInRaw);
+        renderDataSection(graphics, font, serverX + 15, startY + 130, panelWidth - 30, false, serverOutSpeed, serverOutActual, serverOutRaw);
     }
 
     private void drawBorder(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int color) {
@@ -108,32 +108,24 @@ public class StatScreen extends Screen {
         graphics.fill(x + width - 1, y, x + width, y + height, color); // Right
     }
 
-    private void drawCenteredString(GuiGraphicsExtractor graphics, net.minecraft.client.gui.ActiveTextCollector textRenderer, Component text, int x, int y, int color) {
-        // Simple approximation for centered text, assuming average char width
-        int strWidth = text.getString().length() * 6; 
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(x - strWidth / 2.0f, y, 0);
-        // Note: Actual rendering color depends on how textRenderer applies styles. We use standard Component rendering here.
-        textRenderer.accept(text);
-        graphics.pose().popMatrix();
+    private void drawCenteredString(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, Component text, int x, int y, int color) {
+        int strWidth = font.width(text);
+        graphics.drawString(font, text, x - strWidth / 2, y, color, false);
     }
 
-    private void renderDataSection(GuiGraphicsExtractor graphics, net.minecraft.client.gui.ActiveTextCollector textRenderer, int x, int y, int width, boolean isInbound, int speed, long actual, long raw) {
+    private void renderDataSection(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, int width, boolean isInbound, int speed, long actual, long raw) {
         String title = isInbound ? "↓ Inbound" : "↑ Outbound";
         // Minecraft Green / Minecraft Red
         Component titleComp = Component.literal(title).withColor(isInbound ? 0x55FF55 : 0xFF5555);
         
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(x, y, 0);
-        textRenderer.accept(titleComp);
-        graphics.pose().popMatrix();
+        graphics.drawString(font, titleComp, x, y, 0xFFFFFFFF, false);
 
         int rowY = y + 15;
         int valueXOffset = 100;
         
-        drawDataRow(graphics, textRenderer, x, rowY, "Speed:", getReadableSpeed(speed), valueXOffset);
-        drawDataRow(graphics, textRenderer, x, rowY + 12, "Actual Total:", getReadableSize(actual), valueXOffset);
-        drawDataRow(graphics, textRenderer, x, rowY + 24, "Raw Total:", getReadableSize(raw), valueXOffset);
+        drawDataRow(graphics, font, x, rowY, "Speed:", getReadableSpeed(speed), valueXOffset);
+        drawDataRow(graphics, font, x, rowY + 12, "Actual Total:", getReadableSize(actual), valueXOffset);
+        drawDataRow(graphics, font, x, rowY + 24, "Raw Total:", getReadableSize(raw), valueXOffset);
 
         // Render Ratio Bar
         int barY = rowY + 40;
@@ -156,27 +148,17 @@ public class StatScreen extends Screen {
         // Ratio Text
         String ratioStr = String.format("%.2f%%", ratio * 100);
         Component ratioComp = Component.literal(ratioStr).withColor(0xFFFFFFFF); // White text
-        int strWidth = ratioStr.length() * 6; // approximate width
+        int strWidth = font.width(ratioComp);
         
-        graphics.pose().pushMatrix();
-        graphics.pose().translate((float) (x + width - strWidth - 5), (float) (barY - 10), 0f);
-        textRenderer.accept(ratioComp);
-        graphics.pose().popMatrix();
+        graphics.drawString(font, ratioComp, x + width - strWidth - 5, barY - 10, 0xFFFFFFFF, false);
     }
 
-    private void drawDataRow(GuiGraphicsExtractor graphics, net.minecraft.client.gui.ActiveTextCollector textRenderer, int x, int y, String label, String value, int valueXOffset) {
+    private void drawDataRow(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, String label, String value, int valueXOffset) {
         Component labelComp = Component.literal(label).withColor(0xFFAAAAAA); // Gray
         Component valueComp = Component.literal(value);
         
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(x, y, 0);
-        textRenderer.accept(labelComp);
-        graphics.pose().popMatrix();
-        
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(x + valueXOffset, y, 0);
-        textRenderer.accept(valueComp);
-        graphics.pose().popMatrix();
+        graphics.drawString(font, labelComp, x, y, 0xFFFFFFFF, false);
+        graphics.drawString(font, valueComp, x + valueXOffset, y, 0xFFFFFFFF, false);
     }
 
     private String getReadableSpeed(int bytes) {
