@@ -67,63 +67,53 @@ public class StatScreen extends Screen {
         ratioLabel = Component.translatable("stat.notenoughbandwidth.ratio");
     }
 
+    private float uiScale = 1.0f;
+
     @Override
     protected void init() {
         super.init();
 
+        // Target size for the entire UI
+        int targetWidth = 580;
+        int targetHeight = 460; // For vertical stacked mode
+
+        // Calculate scale if screen is too small
+        uiScale = 1.0f;
+        if (width < targetWidth || height < targetHeight) {
+            float scaleX = (float) width / (targetWidth + 20);
+            float scaleY = (float) height / (targetHeight + 20);
+            uiScale = Math.min(scaleX, scaleY);
+            if (uiScale > 1.0f) uiScale = 1.0f;
+            if (uiScale < 0.5f) uiScale = 0.5f; // Minimum scale
+        }
+
+        // Adjust logical width/height for UI framework based on scale
+        int scaledWidth = (int) (width / uiScale);
+        int scaledHeight = (int) (height / uiScale);
+
         rootPanel = new Panel();
         rootPanel.setLayoutType(Panel.LayoutType.ABSOLUTE);
         rootPanel.setPosition(0, 0);
-        rootPanel.setSize(width, height);
+        rootPanel.setSize(scaledWidth, scaledHeight);
 
         Panel mainContainer = new Panel();
-        // If the screen is too narrow (e.g. GUI Scale 5 or 6 on smaller resolutions), stack them vertically
-        // Assume minimum width for horizontal layout is 600
-        int singlePanelWidth = Math.min(280, width - 20); // 10 padding on each side
-        if (width < singlePanelWidth * 2 + 40) {
-            mainContainer.setLayoutType(Panel.LayoutType.VERTICAL);
-        } else {
-            mainContainer.setLayoutType(Panel.LayoutType.HORIZONTAL);
-        }
+        // Force vertical stacked mode for simplicity and better space usage in small screens
+        mainContainer.setLayoutType(Panel.LayoutType.VERTICAL);
         mainContainer.setSpacing(20);
 
-        Panel clientPanel = createPanel(clientTitle, true);
-        Panel serverPanel = createPanel(serverTitle, false);
+        Panel clientPanel = createPanel(clientTitle, true, scaledWidth, scaledHeight);
+        Panel serverPanel = createPanel(serverTitle, false, scaledWidth, scaledHeight);
 
         mainContainer.add(clientPanel);
         mainContainer.add(serverPanel);
 
-        // Dynamically compute width and height to center
-        int mainWidth;
-        int mainHeight;
-        
-        int panelWidth = Math.min(280, width - 20);
-        int panelHeight = Math.min(220, (height - 20) / (width < (panelWidth * 2 + 40) ? 2 : 1));
-        if (panelHeight < 150) panelHeight = 150;
+        int mainWidth = 280;
+        int mainHeight = 220 * 2 + 20;
 
-        if (width < panelWidth * 2 + 40) {
-            mainWidth = panelWidth; // Single panel width
-            mainHeight = panelHeight * 2 + 20; // Two panels stacked + spacing
-        } else {
-            mainWidth = panelWidth * 2 + 20;
-            mainHeight = panelHeight;
-        }
-        
-        // Handle vertical overflow for extremely small heights (e.g. GUI Scale 5)
-        int startY = (height - mainHeight) / 2;
-        if (startY < 0) {
-            // Let it be scrollable? No, let's just make it start from top
-            startY = 5;
-        }
-        
-        // Scale down the entire container using PoseStack/GuiGraphics scale?
-        // Let's just adjust spacing or height if it still overlaps.
-        // Actually, the main container is now dynamically sized. Let's make sure elements inside are properly constrained.
-        
-        // Ensure width isn't negative
-        int startX = (width - mainWidth) / 2;
-        if (startX < 0) startX = 10;
-        
+        int startX = (scaledWidth - mainWidth) / 2;
+        int startY = (scaledHeight - mainHeight) / 2;
+        if (startY < 5) startY = 5;
+
         mainContainer.setPosition(startX, startY);
         mainContainer.setSize(mainWidth, mainHeight);
 
@@ -131,37 +121,29 @@ public class StatScreen extends Screen {
         
         // Initial layout and data update
         updateData();
-        rootPanel.layout(font);
         updateRatioTextPositions();
         rootPanel.layout(font);
     }
 
-    private Panel createPanel(Component title, boolean isClient) {
+    private Panel createPanel(Component title, boolean isClient, int scaledWidth, int scaledHeight) {
         Panel panel = new Panel();
-        // Dynamically scale panel width if the screen is narrower than the default 280
-        int panelWidth = Math.min(280, width - 20); // 10 padding on each side
-        // If height is very small, we might want to shrink the panel height and text spacing
-        int panelHeight = Math.min(220, (height - 20) / (width < (panelWidth * 2 + 40) ? 2 : 1));
-        if (panelHeight < 150) panelHeight = 150; // Minimum usable height
-        
-        panel.setSize(panelWidth, panelHeight); 
+        panel.setSize(280, 220);
         panel.setLayoutType(Panel.LayoutType.ABSOLUTE);
-        // Rounded background with transparent dark color and white border
         panel.setBackground(0x90000000, 0xAAFFFFFF, 8);
 
         Text titleText = new Text(title);
         titleText.setCentered(true);
-        titleText.setPosition(panelWidth / 2, 10);
+        titleText.setPosition(140, 10);
         panel.add(titleText);
 
-        int sectionHeight = (panelHeight - 30) / 2; // Remaining height for 2 sections
+        int sectionHeight = 90;
         
-        Panel inboundPanel = createDataSection(true, isClient, panelWidth, sectionHeight);
+        Panel inboundPanel = createDataSection(true, isClient, 280, sectionHeight);
         inboundPanel.setPosition(10, 30);
         panel.add(inboundPanel);
 
-        Panel outboundPanel = createDataSection(false, isClient, panelWidth, sectionHeight);
-        outboundPanel.setPosition(10, 30 + sectionHeight);
+        Panel outboundPanel = createDataSection(false, isClient, 280, sectionHeight);
+        outboundPanel.setPosition(10, 125);
         panel.add(outboundPanel);
 
         return panel;
@@ -170,23 +152,21 @@ public class StatScreen extends Screen {
     private Panel createDataSection(boolean isInbound, boolean isClient, int panelWidth, int maxSectionHeight) {
         Panel panel = new Panel();
         panel.setLayoutType(Panel.LayoutType.ABSOLUTE);
-        int innerWidth = panelWidth - 20; // 10 padding on each side of the panel
-        
-        // Dynamically adjust vertical spacing to prevent overlap
-        int lineGap = Math.max(9, (maxSectionHeight - 40) / 3); 
+        int innerWidth = panelWidth - 20;
+
+        int lineGap = 9;
         int titleY = 0;
         int rowY = titleY + 12;
-        int barY = rowY + lineGap * 3 + 4; // Give it 4px gap below rawLabel
-        
-        panel.setSize(innerWidth, barY + 12); 
+        int barY = rowY + lineGap * 3 + 4;
+
+        panel.setSize(innerWidth, barY + 12);
 
         Component titleComp = isInbound ? inboundTitle : outboundTitle;
         Text sectionTitle = new Text(titleComp);
         sectionTitle.setPosition(0, titleY);
         panel.add(sectionTitle);
 
-        // Dynamically compute the value X offset based on innerWidth
-        int valX = Math.min(100, innerWidth / 2 + 10);
+        int valX = 100;
 
         Text speedLbl = new Text(speedLabel);
         speedLbl.setPosition(0, rowY);
@@ -317,16 +297,8 @@ public class StatScreen extends Screen {
     private void updateRatioTextPositions() {
         if (font == null) return;
         
-        int panelWidth = Math.min(280, width - 20);
-        int innerWidth = panelWidth - 20; // 10 padding on each side of panel
-        
-        int panelHeight = Math.min(220, (height - 20) / (width < (panelWidth * 2 + 40) ? 2 : 1));
-        if (panelHeight < 150) panelHeight = 150;
-        int sectionHeight = (panelHeight - 30) / 2;
-        int lineGap = Math.max(9, (sectionHeight - 40) / 3); 
-        int titleY = 0;
-        int rowY = titleY + 12;
-        int barY = rowY + lineGap * 3 + 4;
+        int innerWidth = 260; // 280 - 20
+        int barY = 12 + 9 * 3 + 4; // Since we fixed section height and line gap, let's just compute the fixed barY
         
         adjustRatioText(clientInRatioText, innerWidth, barY);
         adjustRatioText(clientOutRatioText, innerWidth, barY);
@@ -362,7 +334,12 @@ public class StatScreen extends Screen {
         graphics.fill(0, 0, width, height, 0x80000000);
 
         if (rootPanel != null) {
-            rootPanel.render(graphics, font, mouseX, mouseY, a);
+            graphics.pose().pushPose();
+            if (uiScale != 1.0f) {
+                graphics.pose().scale(uiScale, uiScale, 1.0f);
+            }
+            rootPanel.render(graphics, font, (int) (mouseX / uiScale), (int) (mouseY / uiScale), a);
+            graphics.pose().popPose();
         }
     }
 
