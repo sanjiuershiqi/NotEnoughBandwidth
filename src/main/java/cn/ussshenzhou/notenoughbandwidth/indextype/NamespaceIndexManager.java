@@ -228,7 +228,7 @@ public class NamespaceIndexManager {
     }};
 
     public synchronized static void init(List<Identifier> types) {
-        if (FMLEnvironment.getDist() == Dist.DEDICATED_SERVER && initialized) {
+        if (initialized) {
             return;
         }
         initialized = false;

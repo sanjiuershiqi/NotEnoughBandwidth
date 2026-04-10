@@ -19,7 +19,7 @@ import java.util.concurrent.*;
  * @author USS_Shenzhou
  */
 public class AggregationManager {
-    private static final WeakHashMap<Connection, ArrayList<AggregatedEncodePacket>> PACKET_BUFFER = new WeakHashMap<>();
+    private static final ConcurrentHashMap<Connection, ConcurrentLinkedQueue<AggregatedEncodePacket>> PACKET_BUFFER = new ConcurrentHashMap<>();
     private static final ScheduledExecutorService TIMER = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setNameFormat("NEB-Flush-thread").setDaemon(true).build());
     private static final ArrayList<ScheduledFuture<?>> TASKS = new ArrayList<>();
     private static volatile boolean initialized = false;
@@ -36,26 +36,32 @@ public class AggregationManager {
         initialized = true;
     }
 
-    public synchronized static void takeOver(Packet<?> packet, Connection connection) {
+    public static void takeOver(Packet<?> packet, Connection connection) {
         var type = PacketUtil.getTrueType(packet);
-        PACKET_BUFFER.computeIfAbsent(connection, _ -> new ArrayList<>()).add(new AggregatedEncodePacket(packet, type));
+        PACKET_BUFFER.computeIfAbsent(connection, k -> new ConcurrentLinkedQueue<>()).offer(new AggregatedEncodePacket(packet, type));
     }
 
-    private synchronized static void flush() {
+    private static void flush() {
         PACKET_BUFFER.entrySet().removeIf(e -> !e.getKey().isConnected());
-        PACKET_BUFFER.forEach(AggregationManager::flushInternal);
+        for (var entry : PACKET_BUFFER.entrySet()) {
+            Connection conn = entry.getKey();
+            ConcurrentLinkedQueue<AggregatedEncodePacket> queue = entry.getValue();
+            if (!queue.isEmpty()) {
+                conn.channel().eventLoop().execute(() -> flushInternal(conn, queue));
+            }
+        }
     }
 
-    public synchronized static void flushConnection(Connection connection) {
-        TIMER.execute(() -> {
-            PACKET_BUFFER.entrySet().removeIf(e -> !e.getKey().isConnected());
-            flushInternal(connection, PACKET_BUFFER.get(connection));
-        });
+    public static void flushConnection(Connection connection) {
+        ConcurrentLinkedQueue<AggregatedEncodePacket> queue = PACKET_BUFFER.get(connection);
+        if (queue != null && !queue.isEmpty()) {
+            connection.channel().eventLoop().execute(() -> flushInternal(connection, queue));
+        }
     }
 
-    private synchronized static void flushInternal(Connection connection, @Nullable ArrayList<AggregatedEncodePacket> packets) {
+    private static void flushInternal(Connection connection, ConcurrentLinkedQueue<AggregatedEncodePacket> queue) {
         try {
-            if (packets == null || packets.isEmpty()) {
+            if (queue == null || queue.isEmpty() || !connection.isConnected()) {
                 return;
             }
             var encoder = DefaultChannelPipelineHelper.getPacketEncoder((DefaultChannelPipeline) connection.channel().pipeline());
@@ -63,13 +69,20 @@ public class AggregationManager {
                 LogUtils.getLogger().error("Failed to get PacketEncoder of connection {} {}.", connection.getDirection(), connection.getRemoteAddress());
                 return;
             }
-            var sendPackets = new ArrayList<>(packets);
+            
+            var sendPackets = new ArrayList<AggregatedEncodePacket>();
+            AggregatedEncodePacket pkt;
+            while ((pkt = queue.poll()) != null) {
+                sendPackets.add(pkt);
+            }
+            
+            if (sendPackets.isEmpty()) return;
+
             connection.send(connection.getSending() == PacketFlow.CLIENTBOUND
                             ? new ClientboundCustomPayloadPacket(new PacketAggregationPacket(sendPackets, encoder.getProtocolInfo(), connection))
                             : new ServerboundCustomPayloadPacket(new PacketAggregationPacket(sendPackets, encoder.getProtocolInfo(), connection)),
                     null, true
             );
-            packets.clear();
         } catch (Exception e) {
             LogUtils.getLogger().error("Skipped: Failed to flush packets.", e);
         }

@@ -32,9 +32,10 @@ public class PacketAggregationPacket implements CustomPacketPayload {
         return TYPE;
     }
 
+    public static final ThreadLocal<Boolean> IS_ENCODING_IN_ENCODER = ThreadLocal.withInitial(() -> false);
+
     private int bakedSize;
     //----------------------------------------encode----------------------------------------
-    private static final StackWalker WALKER = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
     private final ArrayList<AggregatedEncodePacket> packetsToEncode;
     private final ProtocolInfo<?> protocolInfo;
     private Connection connection;
@@ -62,11 +63,11 @@ public class PacketAggregationPacket implements CustomPacketPayload {
      */
     @SuppressWarnings("UnstableApiUsage")
     public void encode(RegistryFriendlyByteBuf buffer) {
-        //skip GenericPacketSplitter
-        if (WALKER.walk(s -> s.anyMatch(frame -> frame.getDeclaringClass() == GenericPacketSplitter.class))) {
+        // skip GenericPacketSplitter overhead by returning empty unless we are in the actual encoder
+        if (!IS_ENCODING_IN_ENCODER.get()) {
             return;
         }
-        var rawBuf = new RegistryFriendlyByteBuf(ByteBufAllocator.DEFAULT.buffer(), buffer.registryAccess(), buffer.getConnectionType());
+        var rawBuf = new RegistryFriendlyByteBuf(buffer.alloc().buffer(), buffer.registryAccess(), buffer.getConnectionType());
         packetsToEncode.forEach(p -> encodePackets(rawBuf, p));
 
         int rawSize = rawBuf.readableBytes();
@@ -107,7 +108,7 @@ public class PacketAggregationPacket implements CustomPacketPayload {
         // p
         CustomPacketPrefixHelper.write(type, raw);
         // s
-        var d = new RegistryFriendlyByteBuf(ByteBufAllocator.DEFAULT.buffer(), raw.registryAccess(), raw.getConnectionType());
+        var d = new RegistryFriendlyByteBuf(raw.alloc().buffer(), raw.registryAccess(), raw.getConnectionType());
         packet.encode(d, protocolInfo, connection.getSending());
         raw.writeVarInt(d.readableBytes());
         // d

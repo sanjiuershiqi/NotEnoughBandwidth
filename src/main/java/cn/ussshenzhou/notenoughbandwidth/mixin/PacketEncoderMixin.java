@@ -19,6 +19,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(PacketEncoder.class)
 public class PacketEncoderMixin {
 
+    @Inject(method = "encode(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/protocol/Packet;Lio/netty/buffer/ByteBuf;)V", at = @At("HEAD"))
+    private void nebSetEncodingFlag(ChannelHandlerContext ctx, Packet<?> packet, ByteBuf output, CallbackInfo ci) {
+        if (PacketUtil.getTruePacket(packet) instanceof PacketAggregationPacket) {
+            PacketAggregationPacket.IS_ENCODING_IN_ENCODER.set(true);
+        }
+    }
+
+    @Inject(method = "encode(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/protocol/Packet;Lio/netty/buffer/ByteBuf;)V", at = @At("TAIL"))
+    private void nebClearEncodingFlag(ChannelHandlerContext ctx, Packet<?> packet, ByteBuf output, CallbackInfo ci) {
+        if (PacketUtil.getTruePacket(packet) instanceof PacketAggregationPacket) {
+            PacketAggregationPacket.IS_ENCODING_IN_ENCODER.remove();
+        }
+    }
+
     @Inject(method = "encode(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/protocol/Packet;Lio/netty/buffer/ByteBuf;)V",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiling/jfr/JvmProfiler;onPacketSent(Lnet/minecraft/network/ConnectionProtocol;Lnet/minecraft/network/protocol/PacketType;Ljava/net/SocketAddress;I)V", shift = At.Shift.BEFORE))
     private void nebRecordOut(ChannelHandlerContext ctx, Packet<?> packet, ByteBuf output, CallbackInfo ci, @Local int size) {
