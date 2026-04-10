@@ -110,23 +110,15 @@ public class StatScreen extends Screen {
 
     private void drawCenteredString(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, Component text, int x, int y, int color) {
         int strWidth = font.width(text);
-        var textRenderer = graphics.textRenderer();
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(x - strWidth / 2.0f, (float) y, 0f);
-        textRenderer.accept(0, 0, text);
-        graphics.pose().popMatrix();
+        graphics.drawString(font, text, x - strWidth / 2, y, color);
     }
 
     private void renderDataSection(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, int width, boolean isInbound, int speed, long actual, long raw) {
         String title = isInbound ? "↓ Inbound" : "↑ Outbound";
         // Minecraft Green / Minecraft Red
         Component titleComp = Component.literal(title).withColor(isInbound ? 0x55FF55 : 0xFF5555);
-        var textRenderer = graphics.textRenderer();
         
-        graphics.pose().pushMatrix();
-        graphics.pose().translate((float) x, (float) y, 0f);
-        textRenderer.accept(0, 0, titleComp);
-        graphics.pose().popMatrix();
+        graphics.drawString(font, titleComp, x, y, 0xFFFFFFFF);
 
         int rowY = y + 15;
         int valueXOffset = 100;
@@ -158,26 +150,15 @@ public class StatScreen extends Screen {
         Component ratioComp = Component.literal(ratioStr).withColor(0xFFFFFFFF); // White text
         int strWidth = font.width(ratioComp);
         
-        graphics.pose().pushMatrix();
-        graphics.pose().translate((float) (x + width - strWidth - 5), (float) (barY - 10), 0f);
-        textRenderer.accept(0, 0, ratioComp);
-        graphics.pose().popMatrix();
+        graphics.drawString(font, ratioComp, x + width - strWidth - 5, barY - 10, 0xFFFFFFFF);
     }
 
     private void drawDataRow(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, String label, String value, int valueXOffset) {
         Component labelComp = Component.literal(label).withColor(0xFFAAAAAA); // Gray
         Component valueComp = Component.literal(value);
-        var textRenderer = graphics.textRenderer();
         
-        graphics.pose().pushMatrix();
-        graphics.pose().translate((float) x, (float) y, 0f);
-        textRenderer.accept(0, 0, labelComp);
-        graphics.pose().popMatrix();
-        
-        graphics.pose().pushMatrix();
-        graphics.pose().translate((float) (x + valueXOffset), (float) y, 0f);
-        textRenderer.accept(0, 0, valueComp);
-        graphics.pose().popMatrix();
+        graphics.drawString(font, labelComp, x, y, 0xFFFFFFFF);
+        graphics.drawString(font, valueComp, x + valueXOffset, y, 0xFFFFFFFF);
     }
 
     private String getReadableSpeed(int bytes) {
