@@ -32,6 +32,11 @@ public class StatScreen extends Screen {
     private long serverOutActual;
     private long serverOutRaw;
 
+    // Layout and UI elements
+    private net.minecraft.client.gui.components.StringWidget clientTitleWidget;
+    private net.minecraft.client.gui.components.StringWidget serverTitleWidget;
+    private net.minecraft.client.gui.layouts.LinearLayout layout;
+    
     // Client Data Cached Strings
     private Component clientInSpeedStr = Component.empty();
     private Component clientInActualStr = Component.empty();
@@ -143,12 +148,34 @@ public class StatScreen extends Screen {
     }
 
     @Override
+    protected void init() {
+        super.init();
+
+        this.layout = net.minecraft.client.gui.layouts.LinearLayout.horizontal().spacing(20);
+        
+        var clientPanel = net.minecraft.client.gui.layouts.LinearLayout.vertical().spacing(10);
+        clientTitleWidget = new net.minecraft.client.gui.components.StringWidget(clientTitle, this.font);
+        clientTitleWidget.setColor(0xFFFFAA00);
+        clientPanel.addChild(clientTitleWidget, net.minecraft.client.gui.layouts.LayoutSettings::alignHorizontallyCenter);
+        
+        var serverPanel = net.minecraft.client.gui.layouts.LinearLayout.vertical().spacing(10);
+        serverTitleWidget = new net.minecraft.client.gui.components.StringWidget(serverTitle, this.font);
+        serverTitleWidget.setColor(0xFFFFAA00);
+        serverPanel.addChild(serverTitleWidget, net.minecraft.client.gui.layouts.LayoutSettings::alignHorizontallyCenter);
+        
+        this.layout.addChild(clientPanel);
+        this.layout.addChild(serverPanel);
+        
+        this.layout.arrangeElements();
+    }
+
+    @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         super.extractRenderState(graphics, mouseX, mouseY, a);
-        graphics.fill(0, 0, width, height, 0x80000000);
+        graphics.renderBackground();
 
-        int panelWidth = 300;
-        int panelHeight = 220;
+        int panelWidth = 280;
+        int panelHeight = 210;
         int gap = 20;
 
         int totalWidth = panelWidth * 2 + gap;
@@ -158,28 +185,25 @@ public class StatScreen extends Screen {
         int clientX = startX;
         int serverX = startX + panelWidth + gap;
 
-        // Draw Panels Background
-        graphics.fill(clientX, startY, clientX + panelWidth, startY + panelHeight, 0x90000000);
-        graphics.fill(serverX, startY, serverX + panelWidth, startY + panelHeight, 0x90000000);
-
-        // Draw Panels Border
-        drawBorder(graphics, clientX, startY, panelWidth, panelHeight, 0xFF555555);
-        drawBorder(graphics, serverX, startY, panelWidth, panelHeight, 0xFF555555);
+        // Use modern vanilla tooltip background nine-slice
+        // We draw the menu background directly using modern graphics
+        graphics.renderTooltipBackground(clientX, startY, panelWidth, panelHeight, 0);
+        graphics.renderTooltipBackground(serverX, startY, panelWidth, panelHeight, 0);
 
         var font = this.minecraft.font;
         
-        // Draw Titles
+        // Draw Titles using widget positions or manually centered if widget isn't fully set
         int titleY = startY + 15;
         drawCenteredString(graphics, font, clientTitle, clientX + panelWidth / 2, titleY, 0xFFFFAA00);
         drawCenteredString(graphics, font, serverTitle, serverX + panelWidth / 2, titleY, 0xFFFFAA00);
         
         // Render Data for Client
-        renderDataSection(graphics, font, clientX + 15, startY + 45, panelWidth - 30, true, clientInSpeedStr, clientInActualStr, clientInRawStr, clientInRatio, clientInRatioStr);
-        renderDataSection(graphics, font, clientX + 15, startY + 130, panelWidth - 30, false, clientOutSpeedStr, clientOutActualStr, clientOutRawStr, clientOutRatio, clientOutRatioStr);
+        renderDataSection(graphics, font, clientX + 15, startY + 40, panelWidth - 30, true, clientInSpeedStr, clientInActualStr, clientInRawStr, clientInRatio, clientInRatioStr);
+        renderDataSection(graphics, font, clientX + 15, startY + 125, panelWidth - 30, false, clientOutSpeedStr, clientOutActualStr, clientOutRawStr, clientOutRatio, clientOutRatioStr);
 
         // Render Data for Server
-        renderDataSection(graphics, font, serverX + 15, startY + 45, panelWidth - 30, true, serverInSpeedStr, serverInActualStr, serverInRawStr, serverInRatio, serverInRatioStr);
-        renderDataSection(graphics, font, serverX + 15, startY + 130, panelWidth - 30, false, serverOutSpeedStr, serverOutActualStr, serverOutRawStr, serverOutRatio, serverOutRatioStr);
+        renderDataSection(graphics, font, serverX + 15, startY + 40, panelWidth - 30, true, serverInSpeedStr, serverInActualStr, serverInRawStr, serverInRatio, serverInRatioStr);
+        renderDataSection(graphics, font, serverX + 15, startY + 125, panelWidth - 30, false, serverOutSpeedStr, serverOutActualStr, serverOutRawStr, serverOutRatio, serverOutRatioStr);
     }
 
     private void drawBorder(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int color) {
