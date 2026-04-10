@@ -108,25 +108,25 @@ public class StatScreen extends Screen {
         graphics.fill(x + width - 1, y, x + width, y + height, color); // Right
     }
 
-    private void drawCenteredString(GuiGraphicsExtractor graphics, java.util.function.Consumer<Component> textRenderer, Component text, int x, int y, int color) {
+    private void drawCenteredString(GuiGraphicsExtractor graphics, net.minecraft.client.gui.ActiveTextCollector textRenderer, Component text, int x, int y, int color) {
         // Simple approximation for centered text, assuming average char width
         int strWidth = text.getString().length() * 6; 
-        graphics.pose().pushPose();
+        graphics.pose().pushMatrix();
         graphics.pose().translate(x - strWidth / 2.0f, y, 0);
         // Note: Actual rendering color depends on how textRenderer applies styles. We use standard Component rendering here.
         textRenderer.accept(text);
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
     }
 
-    private void renderDataSection(GuiGraphicsExtractor graphics, java.util.function.Consumer<Component> textRenderer, int x, int y, int width, boolean isInbound, int speed, long actual, long raw) {
+    private void renderDataSection(GuiGraphicsExtractor graphics, net.minecraft.client.gui.ActiveTextCollector textRenderer, int x, int y, int width, boolean isInbound, int speed, long actual, long raw) {
         String title = isInbound ? "↓ Inbound" : "↑ Outbound";
         // Minecraft Green / Minecraft Red
         Component titleComp = Component.literal(title).withColor(isInbound ? 0x55FF55 : 0xFF5555);
         
-        graphics.pose().pushPose();
+        graphics.pose().pushMatrix();
         graphics.pose().translate(x, y, 0);
         textRenderer.accept(titleComp);
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
 
         int rowY = y + 15;
         int valueXOffset = 100;
@@ -158,25 +158,25 @@ public class StatScreen extends Screen {
         Component ratioComp = Component.literal(ratioStr).withColor(0xFFFFFFFF); // White text
         int strWidth = ratioStr.length() * 6; // approximate width
         
-        graphics.pose().pushPose();
-        graphics.pose().translate(x + width - strWidth - 5, barY - 10, 0);
+        graphics.pose().pushMatrix();
+        graphics.pose().translate((float) (x + width - strWidth - 5), (float) (barY - 10), 0f);
         textRenderer.accept(ratioComp);
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
     }
 
-    private void drawDataRow(GuiGraphicsExtractor graphics, java.util.function.Consumer<Component> textRenderer, int x, int y, String label, String value, int valueXOffset) {
+    private void drawDataRow(GuiGraphicsExtractor graphics, net.minecraft.client.gui.ActiveTextCollector textRenderer, int x, int y, String label, String value, int valueXOffset) {
         Component labelComp = Component.literal(label).withColor(0xFFAAAAAA); // Gray
         Component valueComp = Component.literal(value);
         
-        graphics.pose().pushPose();
+        graphics.pose().pushMatrix();
         graphics.pose().translate(x, y, 0);
         textRenderer.accept(labelComp);
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
         
-        graphics.pose().pushPose();
+        graphics.pose().pushMatrix();
         graphics.pose().translate(x + valueXOffset, y, 0);
         textRenderer.accept(valueComp);
-        graphics.pose().popPose();
+        graphics.pose().popMatrix();
     }
 
     private String getReadableSpeed(int bytes) {
