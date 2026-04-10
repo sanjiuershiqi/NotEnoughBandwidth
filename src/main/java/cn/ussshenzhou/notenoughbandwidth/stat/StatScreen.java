@@ -32,8 +32,25 @@ public class StatScreen extends Screen {
     private long serverOutActual;
     private long serverOutRaw;
 
+    private Component clientTitle;
+    private Component serverTitle;
+    private Component inboundTitle;
+    private Component outboundTitle;
+    private Component speedLabel;
+    private Component actualLabel;
+    private Component rawLabel;
+    private Component ratioLabel;
+
     public StatScreen() {
         super(Component.empty());
+        clientTitle = Component.translatable("stat.notenoughbandwidth.client");
+        serverTitle = Component.translatable("stat.notenoughbandwidth.server");
+        inboundTitle = Component.translatable("stat.notenoughbandwidth.inbound");
+        outboundTitle = Component.translatable("stat.notenoughbandwidth.outbound");
+        speedLabel = Component.translatable("stat.notenoughbandwidth.speed").withColor(0xFFAAAAAA);
+        actualLabel = Component.translatable("stat.notenoughbandwidth.actual").withColor(0xFFAAAAAA);
+        rawLabel = Component.translatable("stat.notenoughbandwidth.raw").withColor(0xFFAAAAAA);
+        ratioLabel = Component.translatable("stat.notenoughbandwidth.ratio");
     }
 
     @Override
@@ -89,8 +106,8 @@ public class StatScreen extends Screen {
         
         // Draw Titles
         int titleY = startY + 15;
-        drawCenteredString(graphics, font, Component.translatable("stat.notenoughbandwidth.client"), clientX + panelWidth / 2, titleY, 0xFFFFAA00);
-        drawCenteredString(graphics, font, Component.translatable("stat.notenoughbandwidth.server"), serverX + panelWidth / 2, titleY, 0xFFFFAA00);
+        drawCenteredString(graphics, font, clientTitle, clientX + panelWidth / 2, titleY, 0xFFFFAA00);
+        drawCenteredString(graphics, font, serverTitle, serverX + panelWidth / 2, titleY, 0xFFFFAA00);
         
         // Render Data for Client
         renderDataSection(graphics, font, clientX + 15, startY + 45, panelWidth - 30, true, clientInSpeed, clientInActual, clientInRaw);
@@ -115,9 +132,8 @@ public class StatScreen extends Screen {
     }
 
     private void renderDataSection(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, int width, boolean isInbound, int speed, long actual, long raw) {
-        String titleKey = isInbound ? "stat.notenoughbandwidth.inbound" : "stat.notenoughbandwidth.outbound";
         // Minecraft Green / Minecraft Red
-        Component titleComp = Component.translatable(titleKey).withColor(isInbound ? 0x55FF55 : 0xFF5555);
+        Component titleComp = (isInbound ? inboundTitle : outboundTitle).copy().withColor(isInbound ? 0x55FF55 : 0xFF5555);
         var textRenderer = graphics.textRenderer();
         
         textRenderer.accept(x, y, titleComp);
@@ -125,9 +141,9 @@ public class StatScreen extends Screen {
         int rowY = y + 15;
         int valueXOffset = 100;
         
-        drawDataRow(graphics, font, x, rowY, "stat.notenoughbandwidth.speed", getReadableSpeed(speed), valueXOffset);
-        drawDataRow(graphics, font, x, rowY + 12, "stat.notenoughbandwidth.actual", getReadableSize(actual), valueXOffset);
-        drawDataRow(graphics, font, x, rowY + 24, "stat.notenoughbandwidth.raw", getReadableSize(raw), valueXOffset);
+        drawDataRow(graphics, font, x, rowY, speedLabel, getReadableSpeed(speed), valueXOffset);
+        drawDataRow(graphics, font, x, rowY + 12, actualLabel, getReadableSize(actual), valueXOffset);
+        drawDataRow(graphics, font, x, rowY + 24, rawLabel, getReadableSize(raw), valueXOffset);
 
         // Render Ratio Bar
         int barY = rowY + 40;
@@ -151,14 +167,13 @@ public class StatScreen extends Screen {
         
         // Ratio Text - Make it more obvious
         String ratioStr = String.format("%.2f%%", ratio * 100);
-        Component ratioComp = Component.translatable("stat.notenoughbandwidth.ratio").append(" ").append(ratioStr).withColor(0xFFFFFFFF); // White text
+        Component ratioComp = ratioLabel.copy().append(" ").append(ratioStr).withColor(0xFFFFFFFF); // White text
         int strWidth = font.width(ratioComp);
         
         textRenderer.accept(x + width - strWidth - 5, barY - 10, ratioComp);
     }
 
-    private void drawDataRow(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, String labelKey, String value, int valueXOffset) {
-        Component labelComp = Component.translatable(labelKey).withColor(0xFFAAAAAA); // Gray
+    private void drawDataRow(GuiGraphicsExtractor graphics, net.minecraft.client.gui.Font font, int x, int y, Component labelComp, String value, int valueXOffset) {
         Component valueComp = Component.literal(value);
         var textRenderer = graphics.textRenderer();
         
