@@ -112,7 +112,7 @@ public class StatScreen extends Screen {
         int strWidth = font.width(text);
         var textRenderer = graphics.textRenderer();
         graphics.pose().pushMatrix();
-        graphics.pose().translate(x - strWidth / 2.0f, y, 0);
+        graphics.pose().translate(x - strWidth / 2.0f, (float) y, 0f);
         textRenderer.accept(0, 0, text);
         graphics.pose().popMatrix();
     }
@@ -124,7 +124,7 @@ public class StatScreen extends Screen {
         var textRenderer = graphics.textRenderer();
         
         graphics.pose().pushMatrix();
-        graphics.pose().translate(x, y, 0);
+        graphics.pose().translate((float) x, (float) y, 0f);
         textRenderer.accept(0, 0, titleComp);
         graphics.pose().popMatrix();
 
@@ -170,12 +170,12 @@ public class StatScreen extends Screen {
         var textRenderer = graphics.textRenderer();
         
         graphics.pose().pushMatrix();
-        graphics.pose().translate(x, y, 0);
+        graphics.pose().translate((float) x, (float) y, 0f);
         textRenderer.accept(0, 0, labelComp);
         graphics.pose().popMatrix();
         
         graphics.pose().pushMatrix();
-        graphics.pose().translate(x + valueXOffset, y, 0);
+        graphics.pose().translate((float) (x + valueXOffset), (float) y, 0f);
         textRenderer.accept(0, 0, valueComp);
         graphics.pose().popMatrix();
     }
